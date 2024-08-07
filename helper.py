@@ -165,6 +165,7 @@ def get_data_from_api_ceic(
             PATH_META = f"https://api.ceicdata.com/v2//series/{series_list}/metadata?format=json&start_date={start_date}"
             response_meta = requests.get(f"{PATH_META}&token={os.getenv('CEIC_API_KEY')}")
             meta = json.loads(response_meta.text)["data"]  # metadata
+            
         else:
             content = []
             # for series in series_ids:
