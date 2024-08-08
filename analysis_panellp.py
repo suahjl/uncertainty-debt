@@ -54,8 +54,10 @@ def check_balance_endtiming(input):
 # %%
 # ------- LOOP ------
 list_shock_prefixes = ["max", "min", "maxmin"]
-list_mp_variables = [i + "stir" for i in list_shock_prefixes] + ["stir"]
-list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
+# list_mp_variables = [i + "stir" for i in list_shock_prefixes] + ["stir"]
+# list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
+list_mp_variables = ["maxminstir"]
+list_uncertainty_variables = ["maxepu"]
 for mp_variable in tqdm(list_mp_variables):
     for uncertainty_variable in tqdm(list_uncertainty_variables):
         print("\nMP variable is " + mp_variable)
@@ -71,8 +73,8 @@ for mp_variable in tqdm(list_mp_variables):
             "hhdebt_ngdp",
             "corpdebt_ngdp",
             "govdebt_ngdp",
-            mp_variable,
             "gdp",  # urate gdp
+            mp_variable,
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
             "reer",

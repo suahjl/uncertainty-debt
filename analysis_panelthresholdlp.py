@@ -54,8 +54,10 @@ def check_balance_endtiming(input):
 # %%
 # ------- LOOP ------
 list_shock_prefixes = ["max", "min", "maxmin"]
-list_mp_variables = [i + "stir" for i in list_shock_prefixes] + ["stir"]
-list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
+# list_mp_variables = [i + "stir" for i in list_shock_prefixes] + ["stir"]
+# list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
+list_mp_variables = ["maxminstir"]
+list_uncertainty_variables = ["maxepu"]
 for mp_variable in tqdm(list_mp_variables):
     for uncertainty_variable in tqdm(list_uncertainty_variables):
         print("\nMP variable is " + mp_variable)
@@ -71,8 +73,8 @@ for mp_variable in tqdm(list_mp_variables):
             "hhdebt_ngdp",
             "corpdebt_ngdp",
             "govdebt_ngdp",
-            mp_variable,
             "gdp",  # urate gdp
+            mp_variable,
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
             "reer",
@@ -120,7 +122,9 @@ for mp_variable in tqdm(list_mp_variables):
         # Threshold
         threshold_variable = "hhdebt_ngdp"
 
-        def find_threshold(threshold_variable: str, option: str, param_choice: float):
+        def find_threshold(
+            df: pd.DataFrame, threshold_variable: str, option: str, param_choice: float
+        ):
             if option == "dumb":
                 df.loc[
                     df[threshold_variable + "_ref"] >= param_choice,
@@ -146,8 +150,30 @@ for mp_variable in tqdm(list_mp_variables):
                     "Threshold is "
                     + str(df[threshold_variable + "_ref"].quantile(param_choice))
                 )
+            elif option == "country_quantile":
+                ref = pd.DataFrame(
+                    df.groupby("country")[threshold_variable + "_ref"].quantile(0.8)
+                ).reset_index()
+                ref = ref.rename(
+                    columns={
+                        threshold_variable + "_ref": threshold_variable + "_threshold"
+                    }
+                )
+                df = df.merge(ref, how="left", on="country")
+                df.loc[
+                    df[threshold_variable + "_ref"]
+                    >= df[threshold_variable + "_threshold"],
+                    threshold_variable + "_above_threshold",
+                ] = 1
+                df.loc[
+                    df[threshold_variable + "_ref"]
+                    < df[threshold_variable + "_threshold"],
+                    threshold_variable + "_above_threshold",
+                ] = 0
+            return df
 
-        find_threshold(
+        df = find_threshold(
+            df=df,
             threshold_variable="hhdebt_ngdp",
             option="dumb",
             param_choice=80,
@@ -169,7 +195,7 @@ for mp_variable in tqdm(list_mp_variables):
             X=cols_all_exog,
             threshold_var=threshold_variable + "_above_threshold",
             response=cols_all_endog,
-            horizon=16,
+            horizon=12,
             lags=1,
             varcov="kernel",
             ci_width=0.8,
@@ -201,7 +227,7 @@ for mp_variable in tqdm(list_mp_variables):
                 + uncertainty_variable
                 + "_"
                 + mp_variable
-                + "_" 
+                + "_"
                 + "shock"
                 + shock
                 + ".png",
