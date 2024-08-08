@@ -54,14 +54,14 @@ def check_balance_endtiming(input):
 # %%
 # ------- LOOP ------
 list_shock_prefixes = ["max", "min", "maxmin"]
-# list_mp_variables = [i + "stir" for i in list_shock_prefixes] + ["stir"]
+# list_mp_variables = [i + "stir" for i in list_shock_prefixes]
 # list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
-list_mp_variables = ["maxminstir"]
-list_uncertainty_variables = ["maxepu"]
+list_mp_variables = ["maxminstir"]  # maxminstir
+list_uncertainty_variables = ["maxminepu"]  # maxepu
 for mp_variable in tqdm(list_mp_variables):
     for uncertainty_variable in tqdm(list_uncertainty_variables):
         print("\nMP variable is " + mp_variable)
-        print("\nUncertainty variable is " + uncertainty_variable)
+        print("Uncertainty variable is " + uncertainty_variable)
         # II --- Load data
         df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
         # III --- Additional wrangling
@@ -70,16 +70,18 @@ for mp_variable in tqdm(list_mp_variables):
         # Trim columns
         cols_all_endog = [
             uncertainty_variable,
+            # "epu",
+            mp_variable,
+            "stir",
             "hhdebt_ngdp",
             "corpdebt_ngdp",
             "govdebt_ngdp",
             "gdp",  # urate gdp
-            mp_variable,
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
             "reer",
         ]
-        cols_all_exog = ["brent", "maxminbrent"]
+        cols_all_exog = ["maxminbrent"]  # maxminstir
         cols_threshold = ["hhdebt_ngdp_ref"]
         df = df[cols_groups + cols_all_endog + cols_all_exog + cols_threshold].copy()
         # Check when the panel becomes balanced
@@ -96,6 +98,7 @@ for mp_variable in tqdm(list_mp_variables):
             "germany",  # 2006 Q1
             "sweden",  # ends 2020 Q3 --- epu
             "mexico",  # ends 2023 Q1 --- epu
+            # "russia",  # basket case
         ]  # 12 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
@@ -170,13 +173,39 @@ for mp_variable in tqdm(list_mp_variables):
                     < df[threshold_variable + "_threshold"],
                     threshold_variable + "_above_threshold",
                 ] = 0
+            elif option == "reg_thresholdselection":
+                df_opt_threshold = pd.read_csv(
+                    path_output
+                    + "reg_thresholdselection_fe_"
+                    + "modwith_"
+                    + uncertainty_variable
+                    + "_"
+                    + mp_variable
+                    + "_opt_threshold"
+                    + ".csv"
+                )
+                opt_threshold = df_opt_threshold.iloc[0, 0]
+                df.loc[
+                    df[threshold_variable + "_ref"] >= opt_threshold,
+                    threshold_variable + "_above_threshold",
+                ] = 1
+                df.loc[
+                    df[threshold_variable + "_ref"] < opt_threshold,
+                    threshold_variable + "_above_threshold",
+                ] = 0
+                print(
+                    "optimal threshold: "
+                    + threshold_variable
+                    + " = "
+                    + str(opt_threshold)
+                )
             return df
 
         df = find_threshold(
             df=df,
             threshold_variable="hhdebt_ngdp",
-            option="dumb",
-            param_choice=80,
+            option="reg_thresholdselection",
+            param_choice=0,
         )
 
         # Reset index
@@ -213,11 +242,14 @@ for mp_variable in tqdm(list_mp_variables):
                 + shock
                 + " shocks when "
                 + threshold_variable
-                + " is above threshold",
+                + " is above threshold"
+                + " (exog: "
+                + ", ".join(cols_all_exog)
+                + ")",
                 show_fig=False,
                 save_pic=False,
-                annot_size=14,
-                font_size=14,
+                annot_size=12,
+                font_size=12,
             )
             # save irf (need to use kaleido==0.1.0post1)
             fig.write_image(
