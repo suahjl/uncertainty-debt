@@ -17,3 +17,5 @@ multiprocess
 requests
 ipykernel
 localprojections
+ruptures
+chowtest

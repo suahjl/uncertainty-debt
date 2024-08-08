@@ -1,3 +1,11 @@
+#  %%
+"""
+Important note:
+CPI and Core CPI YoY growth have been replaced with quarterly series for wider and longer coverage.
+Have not checked other variables for similar variation in coverage.
+Added ST gov bond yields to manual data set (not included in API spreadsheet)
+"""
+
 # %%
 import pandas as pd
 from datetime import date, timedelta

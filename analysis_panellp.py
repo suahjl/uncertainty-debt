@@ -78,8 +78,8 @@ for mp_variable in tqdm(list_mp_variables):
             "reer",
         ]
         cols_all_exog = ["brent", "maxminbrent"]
-        cols_threshold = ["hhdebt_ngdp_ref"]
-        df = df[cols_groups + cols_all_endog + cols_all_exog + cols_threshold].copy()
+        # cols_threshold = ["hhdebt_ngdp_ref"]
+        df = df[cols_groups + cols_all_endog + cols_all_exog].copy()
         # Check when the panel becomes balanced
         check_balance_timing(input=df)
         check_balance_endtiming(input=df)
@@ -118,41 +118,6 @@ for mp_variable in tqdm(list_mp_variables):
         # Drop NA
         df = df.dropna(axis=0)
         # Threshold
-        threshold_variable = "hhdebt_ngdp"
-
-        def find_threshold(threshold_variable: str, option: str, param_choice: float):
-            if option == "dumb":
-                df.loc[
-                    df[threshold_variable + "_ref"] >= param_choice,
-                    threshold_variable + "_above_threshold",
-                ] = 1
-                df.loc[
-                    df[threshold_variable + "_ref"] < param_choice,
-                    threshold_variable + "_above_threshold",
-                ] = 0
-                print("Threshold is " + str(param_choice))
-            elif option == "global_quantile":
-                df.loc[
-                    df[threshold_variable + "_ref"]
-                    >= df[threshold_variable + "_ref"].quantile(param_choice),
-                    threshold_variable + "_above_threshold",
-                ] = 1
-                df.loc[
-                    df[threshold_variable + "_ref"]
-                    < df[threshold_variable + "_ref"].quantile(param_choice),
-                    threshold_variable + "_above_threshold",
-                ] = 0
-                print(
-                    "Threshold is "
-                    + str(df[threshold_variable + "_ref"].quantile(param_choice))
-                )
-
-        find_threshold(
-            threshold_variable="hhdebt_ngdp",
-            option="dumb",
-            param_choice=80,
-        )
-
         # Reset index
         df = df.reset_index(drop=True)
         # Numeric time
@@ -163,31 +128,25 @@ for mp_variable in tqdm(list_mp_variables):
 
         # IV --- Analysis
         # estimate model
-        irf_on, irf_off = lp.ThresholdPanelLPX(
+        irf = lp.PanelLPX(
             data=df,
             Y=cols_all_endog,
             X=cols_all_exog,
-            threshold_var=threshold_variable + "_above_threshold",
             response=cols_all_endog,
-            horizon=16,
+            horizon=12,
             lags=1,
             varcov="kernel",
             ci_width=0.8,
         )
         # plot irf
         for shock in [uncertainty_variable, mp_variable]:
-            fig = lp.ThresholdIRFPlot(
-                irf_threshold_on=irf_on,
-                irf_threshold_off=irf_off,
+            fig = lp.IRFPlot(
+                irf=irf,
                 response=cols_all_endog,
                 shock=[shock],
                 n_columns=3,
                 n_rows=3,
-                maintitle="IRFs of "
-                + shock
-                + " shocks when "
-                + threshold_variable
-                + " is above threshold",
+                maintitle="IRFs of " + shock + " shocks",
                 show_fig=False,
                 save_pic=False,
                 annot_size=14,
@@ -196,7 +155,7 @@ for mp_variable in tqdm(list_mp_variables):
             # save irf (need to use kaleido==0.1.0post1)
             fig.write_image(
                 path_output
-                + "panelthresholdlp_irf_"
+                + "panellp_irf_"
                 + "modwith_"
                 + uncertainty_variable
                 + "_"
