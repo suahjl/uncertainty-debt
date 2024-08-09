@@ -36,9 +36,13 @@ path_ceic = "./ceic/"
 tel_config = os.getenv("TEL_CONFIG")
 t_start = date(1990, 1, 1)
 
+# For loading thresholds
+mp_variable = "maxminstir"  # maxminstir
+uncertainty_variable = "maxminepu"  # maxepu
+
 # %%
 # I --- Load data
-df = pd.read_parquet(path_data + "data_macro_yoy_ratesinlevels.parquet")
+df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
 
 # %%
 # II --- Additional wrangling
@@ -50,9 +54,9 @@ cols_groups = ["country", "quarter"]
 # Trim columns
 cols_all = (
     [
-        "hhdebt_ngdp",
-        "corpdebt_ngdp",
-        "govdebt_ngdp",
+        "hhdebt",
+        "corpdebt",
+        "govdebt",
         "hhdebt_ngdp_ref",
         "corpdebt_ngdp_ref",
         "govdebt_ngdp_ref",
@@ -104,8 +108,9 @@ countries_drop = [
     "colombia",  # 2006 Q4
     "germany",  # 2006 Q1
     "sweden",  # ends 2020 Q3 --- epu
-    "mexico",  # ends 2023 Q1 --- epu
-]  # 12 countries
+    # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
+    # "russia",  # basket case
+]  # 12-13 countries
 # Timebound
 df["date"] = pd.to_datetime(df["quarter"]).dt.date
 df = df[(df["date"] >= t_start)]
@@ -160,14 +165,35 @@ def find_threshold(
             df[threshold_variable + "_ref"] < df[threshold_variable + "_threshold"],
             threshold_variable + "_above_threshold",
         ] = 0
+    elif option == "reg_thresholdselection":
+        df_opt_threshold = pd.read_csv(
+            path_output
+            + "reg_thresholdselection_fe_"
+            + "modwith_"
+            + uncertainty_variable
+            + "_"
+            + mp_variable
+            + "_opt_threshold"
+            + ".csv"
+        )
+        opt_threshold = df_opt_threshold.iloc[0, 0]
+        df.loc[
+            df[threshold_variable + "_ref"] >= opt_threshold,
+            threshold_variable + "_above_threshold",
+        ] = 1
+        df.loc[
+            df[threshold_variable + "_ref"] < opt_threshold,
+            threshold_variable + "_above_threshold",
+        ] = 0
+        print("optimal threshold: " + threshold_variable + " = " + str(opt_threshold))
     return df
 
 
 df = find_threshold(
     df=df,
     threshold_variable="hhdebt_ngdp",
-    option="dumb",
-    param_choice=80,
+    option="reg_thresholdselection",
+    param_choice=0,
 )
 
 # Reset index
@@ -175,6 +201,7 @@ df = df.reset_index(drop=True)
 
 # %%
 # III --- Plot
+pic_names = []
 for y, ycolour, dash in tqdm(zip(cols_all, colours_all, dashes_all)):
     fig = subplots_linecharts(
         data=df,
@@ -191,11 +218,15 @@ for y, ycolour, dash in tqdm(zip(cols_all, colours_all, dashes_all)):
         maxcols=4,
         title_size=24,
     )
+    pic_name = path_output + "lineplots" + "_" + y
+    pic_names += [pic_name]
     fig.write_image(
-        path_output + "lineplots" + "_" + y + ".png",
+        pic_name + ".png",
         height=768,
         width=1366,
     )
+pdf_name = path_output + "lineplots"
+pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
 
 # %%
 # X --- Notify

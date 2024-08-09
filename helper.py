@@ -12,6 +12,7 @@ import seaborn as sns
 import plotly.graph_objects as go
 from datetime import date
 from PIL import Image
+
 # from ceic_api_client.pyceic import Ceic
 import re
 import os
@@ -153,7 +154,7 @@ def get_data_from_api_ceic(
 
     def chunker(lst, chunk_size=100):
         for i in range(0, len(lst), chunk_size):
-            yield lst[i:i + chunk_size]
+            yield lst[i : i + chunk_size]
 
     for chunk in chunker(series_ids):
         series_list = ",".join(map(str, chunk))
@@ -163,9 +164,11 @@ def get_data_from_api_ceic(
             content = json.loads(response.text)["data"]  # time points and values
 
             PATH_META = f"https://api.ceicdata.com/v2//series/{series_list}/metadata?format=json&start_date={start_date}"
-            response_meta = requests.get(f"{PATH_META}&token={os.getenv('CEIC_API_KEY')}")
+            response_meta = requests.get(
+                f"{PATH_META}&token={os.getenv('CEIC_API_KEY')}"
+            )
             meta = json.loads(response_meta.text)["data"]  # metadata
-            
+
         else:
             content = []
             # for series in series_ids:
@@ -173,10 +176,10 @@ def get_data_from_api_ceic(
             #     response = requests.get(
             #         f"{PATH}&with_historical_extension=True&token={os.getenv('CEIC_API_KEY')}"
             #     )
-            #     content = content + json.loads(response.text)["data"] 
+            #     content = content + json.loads(response.text)["data"]
         for i in range(len(chunk)):
-            data = pd.DataFrame(content[i]["timePoints"])[["date", "value"]] 
-            country = meta[i]["metadata"]["country"]["name"] 
+            data = pd.DataFrame(content[i]["timePoints"])[["date", "value"]]
+            country = meta[i]["metadata"]["country"]["name"]
             data["country"] = re.sub("[^A-Za-z0-9]+", "_", country).lower()
             df = pd.concat([df, data])
     df = df.sort_values(["country", "date"]).reset_index(drop=True)
@@ -713,7 +716,7 @@ def lineplot(
     line_widths: list[int],
     line_dashes: list[str],
     main_title: str,
-    font_size: int = 24
+    font_size: int = 24,
 ):
     # prelims
     df = data.copy()
@@ -761,7 +764,7 @@ def lineplot_dualaxes(
     line_widths: list[int],
     line_dashes: list[str],
     main_title: str,
-    title_size:int = 24
+    title_size: int = 24,
 ):
     # prelims
     df = data.copy()
@@ -782,8 +785,8 @@ def lineplot_dualaxes(
                 mode="lines",
                 line=dict(color=line_colour, width=line_width, dash=line_dash),
                 # showlegend=False,
-            ), 
-            secondary_y=secondary_y_bool
+            ),
+            secondary_y=secondary_y_bool,
         )
     # layouts
     fig.update_layout(
@@ -810,7 +813,7 @@ def scatterplot(
     best_fit_colour: str,
     best_fit_width: int,
     main_title: str,
-    font_size: int = 26
+    font_size: int = 26,
 ):
     # generate figure
     fig = go.Figure()
@@ -874,6 +877,8 @@ def scatterplot_layered(
     best_fit_widths: list[int],
     main_title: str,
     font_size: int,
+    add_horizontal_at_yzero: bool,
+    add_vertical_at_xzero: bool,
 ):
     # generate figure
     fig = go.Figure()
@@ -935,6 +940,20 @@ def scatterplot_layered(
             )
         except:
             print("Error when estimating best fit line, please inspect dataframe")
+        if add_horizontal_at_yzero:
+            fig.add_hline(
+                y=0,
+                line_dash="dot",
+                line_color="black",
+                line_width=2,
+            )
+        if add_vertical_at_xzero:
+            fig.add_vline(
+                x=0,
+                line_dash="dot",
+                line_color="black",
+                line_width=2,
+            )
     # layouts
     fig.update_layout(
         title=main_title,
@@ -976,11 +995,11 @@ def barchart(
 
 
 def stacked_barchart(
-    data: pd.DataFrame, 
-    stacked_y_cols: list[str], 
+    data: pd.DataFrame,
+    stacked_y_cols: list[str],
     stacked_colours: list[str],
-    x_col: str, 
-    main_title: str, 
+    x_col: str,
+    main_title: str,
     decimal_points: int,
     font_size: float,
     bar_callout_size: float,
@@ -1004,7 +1023,7 @@ def stacked_barchart(
         title=main_title,
         plot_bgcolor="white",
         font=dict(color="black", size=font_size),
-        barmode='stack',
+        barmode="stack",
         height=768,
         width=1366,
     )
@@ -1014,12 +1033,12 @@ def stacked_barchart(
 
 
 def stacked_barchart_overlaycallouts(
-    data: pd.DataFrame, 
-    stacked_y_cols: list[str], 
-    callouts_stacked_y_cols: list[str], 
+    data: pd.DataFrame,
+    stacked_y_cols: list[str],
+    callouts_stacked_y_cols: list[str],
     stacked_colours: list[str],
-    x_col: str, 
-    main_title: str, 
+    x_col: str,
+    main_title: str,
     decimal_points: int,
     font_size: float,
     bar_callout_size: float,
@@ -1027,7 +1046,9 @@ def stacked_barchart_overlaycallouts(
     # generate figure
     fig = go.Figure()
     # add bar chart
-    for stacked_y_col, callouts_stacked_y_col, stacked_colour in zip(stacked_y_cols, callouts_stacked_y_cols, stacked_colours):
+    for stacked_y_col, callouts_stacked_y_col, stacked_colour in zip(
+        stacked_y_cols, callouts_stacked_y_cols, stacked_colours
+    ):
         fig.add_trace(
             go.Bar(
                 x=data[x_col],
@@ -1043,7 +1064,7 @@ def stacked_barchart_overlaycallouts(
         title=main_title,
         plot_bgcolor="white",
         font=dict(color="black", size=font_size),
-        barmode='stack',
+        barmode="stack",
         height=768,
         width=1366,
     )

@@ -139,7 +139,7 @@ def check_balance_timing(input):
     min_quarter_by_country = (
         min_quarter_by_country.groupby("country")["quarter"].min().reset_index()
     )
-    tabulate(min_quarter_by_country, headers="keys", tablefmt="pretty")
+    print(tabulate(min_quarter_by_country, headers="keys", tablefmt="pretty"))
 
 
 def check_balance_endtiming(input):
@@ -148,7 +148,7 @@ def check_balance_endtiming(input):
     max_quarter_by_country = (
         max_quarter_by_country.groupby("country")["quarter"].max().reset_index()
     )
-    tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty")
+    print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
 
 
 # %%
@@ -171,9 +171,9 @@ for mp_variable in tqdm(list_mp_variables):
         cols_all_endog = [
             # "epu",
             "stir",
-            "hhdebt_ngdp",
-            "corpdebt_ngdp",
-            "govdebt_ngdp",
+            "hhdebt",  # _ngdp
+            "corpdebt",  # _ngdp
+            "govdebt",  # _ngdp
             # "gdp",  # urate gdp
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
@@ -203,9 +203,9 @@ for mp_variable in tqdm(list_mp_variables):
             "colombia",  # 2006 Q4
             "germany",  # 2006 Q1
             "sweden",  # ends 2020 Q3 --- epu
-            "mexico",  # ends 2023 Q1 --- epu
+            # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
             # "russia",  # basket case
-        ]  # 12 countries
+        ]  # 12-13 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
         #         "australia",  # 2014 Q2
