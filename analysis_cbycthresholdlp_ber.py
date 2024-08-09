@@ -78,8 +78,8 @@ for mp_variable in tqdm(list_mp_variables):
             "govdebt",  # _ngdp
             "gdp",  # urate gdp
             # "capflows_ngdp",
+            "ber",  # BER before inflation but REER after inflation
             "corecpi",  # corecpi cpi
-            "reer",
         ]
         cols_all_exog = ["maxminbrent"]  # maxminstir
         cols_threshold = ["hhdebt_ngdp_ref"]
@@ -99,6 +99,7 @@ for mp_variable in tqdm(list_mp_variables):
             "sweden",  # ends 2020 Q3 --- epu
             # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
             # "russia",  # basket case
+            "united_states"  # drop if BER is included
         ]  # 12-13 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
@@ -176,7 +177,7 @@ for mp_variable in tqdm(list_mp_variables):
             elif option == "reg_thresholdselection":
                 df_opt_threshold = pd.read_csv(
                     path_output
-                    + "reg_thresholdselection_fe_"
+                    + "reg_thresholdselection_ber_fe_"  # check if BER is included
                     + "modwith_"
                     + uncertainty_variable
                     + "_"
@@ -256,7 +257,7 @@ for mp_variable in tqdm(list_mp_variables):
                 # save irf (need to use kaleido==0.1.0post1)
                 fig.write_image(
                     path_output
-                    + "cbycthresholdlp_irf_"
+                    + "cbycthresholdlp_ber_irf_"
                     + country
                     + "_"
                     + "modwith_"
