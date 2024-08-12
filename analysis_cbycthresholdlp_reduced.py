@@ -176,7 +176,7 @@ for mp_variable in tqdm(list_mp_variables):
             elif option == "reg_thresholdselection":
                 df_opt_threshold = pd.read_csv(
                     path_output
-                    + "reg_thresholdselection_fe_"
+                    + "reg_thresholdselection_reduced_fe_"
                     + "modwith_"
                     + uncertainty_variable
                     + "_"
@@ -237,7 +237,7 @@ for mp_variable in tqdm(list_mp_variables):
                     response=cols_all_endog_sub,
                     shock=[shock],
                     n_columns=3,
-                    n_rows=3,
+                    n_rows=2,
                     maintitle=country
                     + ": "
                     + "IRFs of "
@@ -256,7 +256,7 @@ for mp_variable in tqdm(list_mp_variables):
                 # save irf (need to use kaleido==0.1.0post1)
                 pic_name = (
                     path_output
-                    + "cbycthresholdlp_irf_"
+                    + "cbycthresholdlp_reduced_irf_"
                     + country
                     + "_"
                     + "modwith_"

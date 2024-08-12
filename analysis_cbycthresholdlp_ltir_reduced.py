@@ -55,9 +55,9 @@ def check_balance_endtiming(input):
 # ------- LOOP ------
 pic_names = []
 list_shock_prefixes = ["max", "min", "maxmin"]
-# list_mp_variables = [i + "stir" for i in list_shock_prefixes]
+# list_mp_variables = [i + "ltir" for i in list_shock_prefixes]
 # list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
-list_mp_variables = ["maxminstir"]  # maxminstir
+list_mp_variables = ["maxminltir"]  # maxminltir
 list_uncertainty_variables = ["maxminepu"]  # maxepu
 for mp_variable in tqdm(list_mp_variables):
     for uncertainty_variable in tqdm(list_uncertainty_variables):
@@ -73,7 +73,7 @@ for mp_variable in tqdm(list_mp_variables):
             uncertainty_variable,
             # "epu",
             mp_variable,
-            "stir",
+            "ltir",
             "hhdebt",  # _ngdp
             "corpdebt",  # _ngdp
             "govdebt",  # _ngdp
@@ -82,24 +82,22 @@ for mp_variable in tqdm(list_mp_variables):
             "corecpi",  # corecpi cpi
             "reer",
         ]
-        cols_all_exog = ["maxminbrent"]  # maxminstir
+        cols_all_exog = ["maxminbrent"]  # maxminltir
         cols_threshold = ["hhdebt_ngdp_ref"]
         df = df[cols_groups + cols_all_endog + cols_all_exog + cols_threshold].copy()
         # Check when the panel becomes balanced
         check_balance_timing(input=df)
         check_balance_endtiming(input=df)
         # Trim more countries
-        # if "stir" in mp_variable:
+        # if "ltir" in mp_variable:
         countries_drop = [
             "india",  # 2016 Q3
             "denmark",  # ends 2019 Q3
             "china",  # 2007 Q4 and potentially exclusive case
-            "colombia",  # 2006 Q4
+            "chile",  #  2010Q1
+            "colombia",  # 2005 Q4
             "germany",  # 2006 Q1
-            "sweden",  # ends 2020 Q3 --- epu
-            # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
-            # "russia",  # basket case
-        ]  # 14 countries
+        ]  # 17 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
         #         "australia",  # 2014 Q2
@@ -110,7 +108,7 @@ for mp_variable in tqdm(list_mp_variables):
         #         "germany",  # 2015 Q1
         #         "sweden",  # ends 2020 Q3 --- epu
         #         "mexico",  # ends 2023 Q1 --- epu
-        #         "chile",  # ends 2022 Q2  (doesn't have stir?)
+        #         "chile",  # ends 2022 Q2  (doesn't have ltir?)
         #     ]  # 10 countries
         df = df[~df["country"].isin(countries_drop)].copy()
         # Check again when panel becomes balanced
@@ -176,7 +174,7 @@ for mp_variable in tqdm(list_mp_variables):
             elif option == "reg_thresholdselection":
                 df_opt_threshold = pd.read_csv(
                     path_output
-                    + "reg_thresholdselection_fe_"
+                    + "reg_thresholdselection_ltir_reduced_fe_"
                     + "modwith_"
                     + uncertainty_variable
                     + "_"
@@ -237,7 +235,7 @@ for mp_variable in tqdm(list_mp_variables):
                     response=cols_all_endog_sub,
                     shock=[shock],
                     n_columns=3,
-                    n_rows=3,
+                    n_rows=2,
                     maintitle=country
                     + ": "
                     + "IRFs of "
@@ -256,7 +254,7 @@ for mp_variable in tqdm(list_mp_variables):
                 # save irf (need to use kaleido==0.1.0post1)
                 pic_name = (
                     path_output
-                    + "cbycthresholdlp_irf_"
+                    + "cbycthresholdlp_ltir_reduced_irf_"
                     + country
                     + "_"
                     + "modwith_"

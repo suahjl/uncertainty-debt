@@ -155,7 +155,7 @@ def wrangle_data(option: str):
             del df[i]
 
     # Diff shocks
-    for col in ["epu", "stir"]:
+    for col in ["epu", "stir", "ltir", "m2"]:
         hamilton_shock(col, option="diff")
         reverse_hamilton_shock(col, option="diff")
         twoway_hamilton_shock(col, option="diff")

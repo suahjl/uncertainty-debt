@@ -73,9 +73,9 @@ for mp_variable in tqdm(list_mp_variables):
             # "epu",
             mp_variable,
             "stir",
-            "hhdebt",  # _ngdp
-            "corpdebt",  # _ngdp
-            "govdebt",  # _ngdp
+            # "hhdebt",  # _ngdp
+            # "corpdebt",  # _ngdp
+            # "govdebt",  # _ngdp
             "gdp",  # urate gdp
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
@@ -149,7 +149,7 @@ for mp_variable in tqdm(list_mp_variables):
                 response=cols_all_endog,
                 shock=[shock],
                 n_columns=3,
-                n_rows=3,
+                n_rows=2,
                 maintitle="IRFs of "
                 + shock
                 + " shocks"
@@ -164,7 +164,7 @@ for mp_variable in tqdm(list_mp_variables):
             # save irf (need to use kaleido==0.1.0post1)
             fig.write_image(
                 path_output
-                + "panellp_irf_"
+                + "panellp_reduced_irf_"
                 + "modwith_"
                 + uncertainty_variable
                 + "_"

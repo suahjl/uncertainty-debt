@@ -91,7 +91,6 @@ for mp_variable in tqdm(list_mp_variables):
         # if "stir" in mp_variable:
         countries_drop = [
             "india",  # 2016 Q3
-            "belgium",  # ends 2022 Q3
             "denmark",  # ends 2019 Q3
             "china",  # 2007 Q4 and potentially exclusive case
             "colombia",  # 2006 Q4
@@ -99,7 +98,7 @@ for mp_variable in tqdm(list_mp_variables):
             "sweden",  # ends 2020 Q3 --- epu
             # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
             # "russia",  # basket case
-        ]  # 12-13 countries
+        ]  # 14 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
         #         "australia",  # 2014 Q2

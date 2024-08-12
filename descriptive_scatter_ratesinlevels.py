@@ -42,7 +42,7 @@ uncertainty_variable = "maxminepu"  # maxepu
 
 # %%
 # I --- Load data
-df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
+df = pd.read_parquet(path_data + "data_macro_yoy_ratesinlevels.parquet")
 
 # %%
 # II --- Additional wrangling
@@ -52,25 +52,21 @@ list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes] + ["epu"]
 # Groupby ref
 cols_groups = ["country", "quarter"]
 # Trim columns
-cols_all = (
-    [
-        "hhdebt",
-        "corpdebt",
-        "govdebt",
-        "hhdebt_ngdp_ref",
-        "corpdebt_ngdp_ref",
-        "govdebt_ngdp_ref",
-        "gdp",
-        "urate",
-        "corecpi",
-        "cpi",
-        "reer",
-        "brent",
-        "maxminbrent",
-    ]
-    + list_mp_variables
-    + list_uncertainty_variables
-)
+cols_all = [
+    "hhdebt",
+    "corpdebt",
+    "govdebt",
+    "hhdebt_ngdp_ref",
+    "corpdebt_ngdp_ref",
+    "govdebt_ngdp_ref",
+    "gdp",
+    "urate",
+    "corecpi",
+    "cpi",
+    "reer",
+    "brent",
+    "maxminbrent",
+] + list_mp_variables
 colours_all = [
     "red",
     "green",
@@ -89,15 +85,8 @@ colours_all = [
     "orange",
     "mediumslateblue",
     "darkslateblue",
-    "darkcyan",
-    "darkseagreen",
-    "darkkhaki",
-    "mediumaquamarine",
 ]
-dashes_all = ["solid"] * len(colours_all)
-df = df[cols_groups + cols_all].copy()
-# Add y=0
-df["y_is_zero"] = 0
+df = df[cols_groups + cols_all + list_uncertainty_variables].copy()
 # Trim more countries
 # if "stir" in mp_variable:
 countries_drop = [
@@ -117,37 +106,40 @@ df = df[(df["date"] >= t_start)]
 del df["date"]
 # Drop NA
 df = df.dropna(axis=0)
-
 # Reset index
 df = df.reset_index(drop=True)
 
 # %%
 # III --- Plot
 pic_names = []
-for y, ycolour, dash in tqdm(zip(cols_all, colours_all, dashes_all)):
-    fig = subplots_linecharts(
-        data=df,
-        col_group="country",
-        cols_values=[y, "y_is_zero"],
-        cols_values_nice=[y, "Y=0"],
-        col_time="quarter",
-        annot_size=9,
-        font_size=9,
-        line_colours=[ycolour, "grey"],
-        line_dashes=[dash, "dot"],
-        main_title=y,
-        maxrows=5,
-        maxcols=4,
-        title_size=24,
-    )
-    pic_name = path_output + "lineplot" + "_" + y
-    pic_names += [pic_name]
-    fig.write_image(
-        pic_name + ".png",
-        height=768,
-        width=1366,
-    )
-pdf_name = path_output + "lineplot"
+for x in ["epu", "maxepu", "maxminstir"]:
+    for y, ycolour in tqdm(zip(cols_all, colours_all)):
+        fig = subplots_scatterplots(
+            data=df,
+            col_group="country",
+            cols_x=[x],
+            cols_y=[y],
+            annot_size=9,
+            font_size=9,
+            marker_colours=[ycolour],
+            marker_sizes=[3],
+            include_best_fit=True,
+            best_fit_colours=[ycolour],
+            best_fit_widths=[2],
+            main_title=y + " against " + x,
+            maxrows=5,
+            maxcols=4,
+            add_horizontal_at_yzero=True,
+            add_vertical_at_xzero=True,
+        )
+        pic_name = path_output + "scatter_ratesinlevels" + "_" + y + "_against_" + x
+        pic_names += [pic_name]
+        fig.write_image(
+            pic_name + ".png",
+            height=768,
+            width=1366,
+        )
+pdf_name = path_output + "scatter_ratesinlevels"
 pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
 
 # %%

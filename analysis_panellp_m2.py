@@ -54,9 +54,9 @@ def check_balance_endtiming(input):
 # %%
 # ------- LOOP ------
 list_shock_prefixes = ["max", "min", "maxmin"]
-# list_mp_variables = [i + "stir" for i in list_shock_prefixes]
+# list_mp_variables = [i + "m2" for i in list_shock_prefixes]
 # list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
-list_mp_variables = ["maxminstir"]  # maxminstir
+list_mp_variables = ["maxminm2"]  # maxminm2
 list_uncertainty_variables = ["maxminepu"]  # maxepu
 for mp_variable in tqdm(list_mp_variables):
     for uncertainty_variable in tqdm(list_uncertainty_variables):
@@ -72,7 +72,7 @@ for mp_variable in tqdm(list_mp_variables):
             uncertainty_variable,
             # "epu",
             mp_variable,
-            "stir",
+            "m2",
             "hhdebt",  # _ngdp
             "corpdebt",  # _ngdp
             "govdebt",  # _ngdp
@@ -81,24 +81,21 @@ for mp_variable in tqdm(list_mp_variables):
             "corecpi",  # corecpi cpi
             "reer",
         ]
-        cols_all_exog = ["maxminbrent"]  # maxminstir
+        cols_all_exog = ["maxminbrent"]  # maxminm2
         # cols_threshold = ["hhdebt_ngdp_ref"]
         df = df[cols_groups + cols_all_endog + cols_all_exog].copy()
         # Check when the panel becomes balanced
         check_balance_timing(input=df)
         check_balance_endtiming(input=df)
         # Trim more countries
-        # if "stir" in mp_variable:
+        # if "m2" in mp_variable:
         countries_drop = [
-            "india",  # 2016 Q3
-            "denmark",  # ends 2019 Q3
-            "china",  # 2007 Q4 and potentially exclusive case
-            "colombia",  # 2006 Q4
-            "germany",  # 2006 Q1
-            "sweden",  # ends 2020 Q3 --- epu
-            # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
-            # "russia",  # basket case
-        ]  # 14 countries
+            "india",  # 2012 Q1
+            "china",  # 2007 Q1 and potentially exclusive case
+            "chile",  # 2010 Q1 and potentially exclusive case
+            "colombia",  # 2005 Q4
+            "singapore",  # 2005 Q1
+        ]  # 17 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
         #         "australia",  # 2014 Q2
@@ -109,7 +106,7 @@ for mp_variable in tqdm(list_mp_variables):
         #         "germany",  # 2015 Q1
         #         "sweden",  # ends 2020 Q3 --- epu
         #         "mexico",  # ends 2023 Q1 --- epu
-        #         "chile",  # ends 2022 Q2  (doesn't have stir?)
+        #         "chile",  # ends 2022 Q2  (doesn't have m2?)
         #     ]  # 10 countries
         df = df[~df["country"].isin(countries_drop)].copy()
         # Check again when panel becomes balanced
@@ -164,7 +161,7 @@ for mp_variable in tqdm(list_mp_variables):
             # save irf (need to use kaleido==0.1.0post1)
             fig.write_image(
                 path_output
-                + "panellp_irf_"
+                + "panellp_m2_irf_"
                 + "modwith_"
                 + uncertainty_variable
                 + "_"

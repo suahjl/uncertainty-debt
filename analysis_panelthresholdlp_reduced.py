@@ -2,7 +2,7 @@
 import pandas as pd
 from datetime import date, timedelta
 import re
-from helper import telsendmsg, telsendimg, telsendfiles, pil_img2pdf
+from helper import telsendmsg, telsendimg, telsendfiles
 import localprojections as lp
 from tqdm import tqdm
 import time
@@ -53,7 +53,6 @@ def check_balance_endtiming(input):
 
 # %%
 # ------- LOOP ------
-pic_names = []
 list_shock_prefixes = ["max", "min", "maxmin"]
 # list_mp_variables = [i + "stir" for i in list_shock_prefixes]
 # list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
@@ -74,9 +73,9 @@ for mp_variable in tqdm(list_mp_variables):
             # "epu",
             mp_variable,
             "stir",
-            "hhdebt",  # _ngdp
-            "corpdebt",  # _ngdp
-            "govdebt",  # _ngdp
+            # "hhdebt",  # _ngdp
+            # "corpdebt",  # _ngdp
+            # "govdebt",  # _ngdp
             "gdp",  # urate gdp
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
@@ -176,7 +175,7 @@ for mp_variable in tqdm(list_mp_variables):
             elif option == "reg_thresholdselection":
                 df_opt_threshold = pd.read_csv(
                     path_output
-                    + "reg_thresholdselection_fe_"
+                    + "reg_thresholdselection_reduced_fe_"
                     + "modwith_"
                     + uncertainty_variable
                     + "_"
@@ -204,77 +203,68 @@ for mp_variable in tqdm(list_mp_variables):
         df = find_threshold(
             df=df,
             threshold_variable="hhdebt_ngdp",
-            option="country_quantile",
-            param_choice=75 / 100,
+            option="reg_thresholdselection",
+            param_choice=0,
         )
 
         # Reset index
         df = df.reset_index(drop=True)
         # Numeric time
+        df["time"] = df.groupby("country").cumcount()
+        del df["quarter"]
         # Set multiindex
+        df = df.set_index(["country", "time"])
 
         # IV --- Analysis
         # estimate model
-        for country in tqdm(df["country"].unique()):
-            df_sub = df[df["country"] == country].copy()
-            cols_all_endog_sub = cols_all_endog.copy()
-            irf_on, irf_off = lp.ThresholdTimeSeriesLPX(
-                data=df_sub,
-                Y=cols_all_endog_sub,
-                X=cols_all_exog,
-                threshold_var=threshold_variable + "_above_threshold",
-                response=cols_all_endog_sub,
-                horizon=12,
-                lags=1,
-                newey_lags=1,
-                ci_width=0.8,
+        irf_on, irf_off = lp.ThresholdPanelLPX(
+            data=df,
+            Y=cols_all_endog,
+            X=cols_all_exog,
+            threshold_var=threshold_variable + "_above_threshold",
+            response=cols_all_endog,
+            horizon=12,
+            lags=1,
+            varcov="kernel",
+            ci_width=0.8,
+        )
+        # plot irf
+        for shock in [uncertainty_variable, mp_variable]:
+            fig = lp.ThresholdIRFPlot(
+                irf_threshold_on=irf_on,
+                irf_threshold_off=irf_off,
+                response=cols_all_endog,
+                shock=[shock],
+                n_columns=3,
+                n_rows=2,
+                maintitle="IRFs of "
+                + shock
+                + " shocks when "
+                + threshold_variable
+                + " is above threshold"
+                + " (exog: "
+                + ", ".join(cols_all_exog)
+                + ")",
+                show_fig=False,
+                save_pic=False,
+                annot_size=12,
+                font_size=12,
             )
-            # plot irf
-            for shock in [uncertainty_variable, mp_variable]:
-                fig = lp.ThresholdIRFPlot(
-                    irf_threshold_on=irf_on,
-                    irf_threshold_off=irf_off,
-                    response=cols_all_endog_sub,
-                    shock=[shock],
-                    n_columns=3,
-                    n_rows=3,
-                    maintitle=country
-                    + ": "
-                    + "IRFs of "
-                    + shock
-                    + " shocks when "
-                    + threshold_variable
-                    + " is above threshold"
-                    + " (exog: "
-                    + ", ".join(cols_all_exog)
-                    + ")",
-                    show_fig=False,
-                    save_pic=False,
-                    annot_size=14,
-                    font_size=14,
-                )
-                # save irf (need to use kaleido==0.1.0post1)
-                pic_name = (
-                    path_output
-                    + "cbycthresholdlp_irf_"
-                    + country
-                    + "_"
-                    + "modwith_"
-                    + uncertainty_variable
-                    + "_"
-                    + mp_variable
-                    + "_"
-                    + "shock"
-                    + shock
-                )
-                pic_names += [pic_name]
-                fig.write_image(
-                    pic_name +".png",
-                    height=768,
-                    width=1366,
-                )
-pdf_name = path_output + "cbycthresholdlp_irf"
-pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
+            # save irf (need to use kaleido==0.1.0post1)
+            fig.write_image(
+                path_output
+                + "panelthresholdlp_reduced_irf_"
+                + "modwith_"
+                + uncertainty_variable
+                + "_"
+                + mp_variable
+                + "_"
+                + "shock"
+                + shock
+                + ".png",
+                height=768,
+                width=1366,
+            )
 
 # %%
 # X --- Notify

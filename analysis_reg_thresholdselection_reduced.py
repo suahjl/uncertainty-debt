@@ -171,9 +171,9 @@ for mp_variable in tqdm(list_mp_variables):
         cols_all_endog = [
             # "epu",
             "stir",
-            "hhdebt",  # _ngdp
-            "corpdebt",  # _ngdp
-            "govdebt",  # _ngdp
+            # "hhdebt",  # _ngdp
+            # "corpdebt",  # _ngdp
+            # "govdebt",  # _ngdp
             # "gdp",  # urate gdp
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
@@ -266,7 +266,7 @@ for mp_variable in tqdm(list_mp_variables):
         )
         file_name = (
             path_output
-            + "reg_thresholdselection_fe_"
+            + "reg_thresholdselection_reduced_fe_"
             + "modwith_"
             + uncertainty_variable
             + "_"

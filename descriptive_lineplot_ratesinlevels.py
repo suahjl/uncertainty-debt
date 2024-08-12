@@ -42,7 +42,7 @@ uncertainty_variable = "maxminepu"  # maxepu
 
 # %%
 # I --- Load data
-df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
+df = pd.read_parquet(path_data + "data_macro_yoy_ratesinlevels.parquet")
 
 # %%
 # II --- Additional wrangling
@@ -117,7 +117,6 @@ df = df[(df["date"] >= t_start)]
 del df["date"]
 # Drop NA
 df = df.dropna(axis=0)
-
 # Reset index
 df = df.reset_index(drop=True)
 
@@ -140,14 +139,14 @@ for y, ycolour, dash in tqdm(zip(cols_all, colours_all, dashes_all)):
         maxcols=4,
         title_size=24,
     )
-    pic_name = path_output + "lineplot" + "_" + y
+    pic_name = path_output + "lineplot_ratesinlevels" + "_" + y
     pic_names += [pic_name]
     fig.write_image(
         pic_name + ".png",
         height=768,
         width=1366,
     )
-pdf_name = path_output + "lineplot"
+pdf_name = path_output + "lineplot_ratesinlevels"
 pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
 
 # %%

@@ -2,7 +2,7 @@
 import pandas as pd
 from datetime import date, timedelta
 import re
-from helper import telsendmsg, telsendimg, telsendfiles
+from helper import telsendmsg, telsendimg, telsendfiles, pil_img2pdf
 import localprojections as lp
 from tqdm import tqdm
 import time
@@ -53,6 +53,7 @@ def check_balance_endtiming(input):
 
 # %%
 # ------- LOOP ------
+pic_names = []
 list_shock_prefixes = ["max", "min", "maxmin"]
 # list_mp_variables = [i + "stir" for i in list_shock_prefixes]
 # list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
@@ -99,7 +100,7 @@ for mp_variable in tqdm(list_mp_variables):
             "sweden",  # ends 2020 Q3 --- epu
             # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
             # "russia",  # basket case
-            "united_states"  # drop if BER is included
+            "united_states",  # drop if BER is included
         ]  # 12-13 countries
         # elif "stgby" in mp_variable:
         #     countries_drop = [
@@ -255,7 +256,7 @@ for mp_variable in tqdm(list_mp_variables):
                     font_size=14,
                 )
                 # save irf (need to use kaleido==0.1.0post1)
-                fig.write_image(
+                pic_name = (
                     path_output
                     + "cbycthresholdlp_ber_irf_"
                     + country
@@ -267,10 +268,15 @@ for mp_variable in tqdm(list_mp_variables):
                     + "_"
                     + "shock"
                     + shock
-                    + ".png",
+                )
+                pic_names += [pic_name]
+                fig.write_image(
+                    pic_name + ".png",
                     height=768,
                     width=1366,
                 )
+pdf_name = path_output + "cbycthresholdlp_ber_irf"
+pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
 
 # %%
 # X --- Notify
