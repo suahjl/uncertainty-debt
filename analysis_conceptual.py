@@ -12,7 +12,7 @@ r_n = 0.02  # Natural interest rate
 rho = 0.1  # Sensitivity of the spread to the output gap
 theta = 0.75  # Calvo pricing parameter (probability of not changing prices)
 lambda_w = 0.75  # Increased downward nominal wage rigidity
-debt_threshold = 0.15  # Debt threshold
+debt_threshold = 0.61  # Debt threshold
 
 T = 16  # Time periods for IRF
 
@@ -127,8 +127,8 @@ def plot_irfs_below_above(
 
 
 # Simulate for below threshold 
-average_debt_below = 0.1
-average_debt_above = 0.5
+average_debt_below = 0.8
+average_debt_above = 1.2
 
 # Simulate IRFs for a monetary shock
 y_below, pi_below, r_below, rb_below, default_risk_below, uncertainty_shock = (

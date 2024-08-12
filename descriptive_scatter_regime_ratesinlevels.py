@@ -195,7 +195,7 @@ df = df.reset_index(drop=True)
 plot_cbyc = False
 if plot_cbyc:
     pic_names = []
-    for x in ["epu", "maxepu", "maxminstir"]:
+    for x in ["epu", "maxminepu", "maxminstir"]:
         for y in tqdm(cols_all):
             # split x-axis columns into when H = 0 and H = 1
             df.loc[
@@ -247,7 +247,7 @@ if plot_cbyc:
 plot_pooled = True
 if plot_pooled:
     pic_names = []
-    for x in ["epu", "maxepu", "maxminstir"]:
+    for x in ["epu", "maxminepu", "maxminstir"]:
         for y in tqdm(cols_all):
             # split x-axis columns into when H = 0 and H = 1
             df.loc[
@@ -298,8 +298,10 @@ if plot_pooled:
             pic_names += [pic_name]
             fig.write_image(
                 pic_name + ".png",
-                height=768,
-                width=1366,
+                # height=768,
+                # width=1366,
+                height=1366,
+                width=1100,
             )
     pdf_name = path_output + "scatter_regime_ratesinlevels_pooled"
     pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)

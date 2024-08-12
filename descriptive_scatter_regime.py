@@ -195,7 +195,7 @@ df = df.reset_index(drop=True)
 plot_cbyc = False
 if plot_cbyc:
     pic_names = []
-    for x in ["epu", "maxepu", "maxminstir"]:
+    for x in ["epu", "maxminepu", "maxminstir"]:
         for y in tqdm(cols_all):
             # split x-axis columns into when H = 0 and H = 1
             df.loc[
@@ -245,7 +245,7 @@ if plot_cbyc:
 plot_pooled = True
 if plot_pooled:
     pic_names = []
-    for x in ["epu", "maxepu", "maxminstir"]:
+    for x in ["epu", "maxminepu", "maxminstir"]:
         for y in tqdm(cols_all):
             # split x-axis columns into when H = 0 and H = 1
             df.loc[

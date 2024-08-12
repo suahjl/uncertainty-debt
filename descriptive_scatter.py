@@ -112,7 +112,7 @@ df = df.reset_index(drop=True)
 # %%
 # III --- Plot
 pic_names = []
-for x in ["epu", "maxepu", "maxminstir"]:
+for x in ["epu", "maxminepu", "maxminstir"]:
     for y, ycolour in tqdm(zip(cols_all, colours_all)):
         fig = subplots_scatterplots(
             data=df,

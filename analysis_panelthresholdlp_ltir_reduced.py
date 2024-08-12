@@ -234,7 +234,7 @@ for mp_variable in tqdm(list_mp_variables):
                 response=cols_all_endog,
                 shock=[shock],
                 n_columns=3,
-                n_rows=3,
+                n_rows=2,
                 maintitle="IRFs of "
                 + shock
                 + " shocks when "
