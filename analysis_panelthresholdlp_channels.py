@@ -13,6 +13,8 @@ from tabulate import tabulate
 import ruptures as rpt
 from chow_test import chow_test
 import warnings
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 time_start = time.time()
 
@@ -51,6 +53,111 @@ def check_balance_endtiming(input):
     print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
 
 
+# Define channels function
+def IRFPlotChannels(
+    irf,
+    response,
+    shock,
+    channels,
+    channel_colours,
+    n_columns,
+    n_rows,
+    maintitle="Local Projections Model: Propagation Channels",
+    show_fig=False,
+    save_pic=False,
+    out_path="",
+    out_name="",
+):
+    if (len(response) * len(shock)) > (n_columns * n_rows):
+        raise NotImplementedError(
+            "Number of subplots (n_columns * n_rows) is smaller than number of IRFs to be plotted (n)"
+        )
+    # Set number of rows and columns
+    n_col = n_columns
+    n_row = n_rows
+    # Generate titles first
+    list_titles = []
+    for r in response:
+        for s in shock:
+            subtitle = [s + " -> " + r]
+            list_titles = list_titles + subtitle
+    # Main plot settings
+    fig = make_subplots(rows=n_row, cols=n_col, subplot_titles=list_titles)
+    # Subplot loops
+    count_col = 1
+    count_row = 1
+    legend_count = 0
+    for r in response:
+        for s in shock:
+            d = irf.loc[(irf["Response"] == r) & (irf["Shock"] == s)]
+            d["Zero"] = 0  # horizontal line
+            # Set legend
+            if legend_count == 0:
+                showlegend_bool = True
+            elif legend_count > 0:
+                showlegend_bool = False
+            # Zero
+            fig.add_trace(
+                go.Scatter(
+                    x=d["Horizon"],
+                    y=d["Zero"],
+                    mode="lines",
+                    line=dict(color="grey", width=1, dash="solid"),
+                    showlegend=False,
+                ),
+                row=count_row,
+                col=count_col,
+            )
+            # Total
+            fig.add_trace(
+                go.Scatter(
+                    x=d["Horizon"],
+                    y=d["Total"],
+                    mode="lines",
+                    line=dict(color="black", width=3, dash="solid"),
+                    showlegend=False,
+                ),
+                row=count_row,
+                col=count_col,
+            )
+            # Add channels
+            for c, c_colour in zip(channels, channel_colours):
+                fig.add_trace(
+                    go.Bar(
+                        x=d["Horizon"],
+                        y=d[c],
+                        name=c,
+                        marker=dict(color=c_colour),
+                        showlegend=showlegend_bool,
+                    ),
+                    row=count_row,
+                    col=count_col,
+                )
+            count_col += 1  # move to next
+            if count_col <= n_col:
+                pass
+            elif count_col > n_col:
+                count_col = 1
+                count_row += 1
+            # No further legends
+            legend_count += 1
+    fig.update_annotations(font_size=11)
+    fig.update_layout(
+        title=maintitle,
+        plot_bgcolor="white",
+        hovermode="x unified",
+        showlegend=True,
+        barmode="relative",
+        font=dict(color="black", size=11),
+    )
+    if show_fig == True:
+        fig.show()
+    if save_pic == True:
+        fig.write_image(out_path + out_name + ".png", height=1080, width=1920)
+        fig.write_html(out_path + out_name + ".html")
+    return fig
+
+
 # %%
 # ------- LOOP ------
 list_shock_prefixes = ["max", "min", "maxmin"]
@@ -58,7 +165,7 @@ list_shock_prefixes = ["max", "min", "maxmin"]
 # list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes]
 list_mp_variables = ["maxminstir"]  # maxminstir
 list_uncertainty_variables = ["maxminepu"]  # maxepu
-for mp_variable in tqdm(list_mp_variables):
+for mp_variable in list_mp_variables:
     for uncertainty_variable in tqdm(list_uncertainty_variables):
         print("\nMP variable is " + mp_variable)
         print("Uncertainty variable is " + uncertainty_variable)
@@ -80,6 +187,20 @@ for mp_variable in tqdm(list_mp_variables):
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
             "reer",
+        ]
+        colours_all_endog = [
+            "crimson",
+            # "epu",
+            "darkgreen",
+            "green",
+            "darkmagenta",  # _ngdp
+            "magenta",  # _ngdp
+            "sandybrown",  # _ngdp
+            "darkblue",  # urate gdp
+            # "",
+            "orange",  # corecpi cpi
+            "cadetblue",
+            "lightgrey",  # for own shock
         ]
         cols_all_exog = ["maxminbrent"]  # maxminstir
         cols_threshold = ["hhdebt_ngdp_ref"]
@@ -216,28 +337,69 @@ for mp_variable in tqdm(list_mp_variables):
         df = df.set_index(["country", "time"])
 
         # IV --- Analysis
+        # Generate list of list of endog and exog variables to rotate between
+        nested_list_endog = []
+        nested_list_exog = []
+        for col_endog_loc in range(len(cols_all_endog)):
+            # endogs
+            sublist_endog = (
+                cols_all_endog[:col_endog_loc] + cols_all_endog[col_endog_loc + 1 :]
+            )
+            nested_list_endog.append(sublist_endog)  # generate list of list
+            # exogs
+            sublist_exog = cols_all_exog.copy()
+            sublist_exog = sublist_exog + [cols_all_endog[col_endog_loc]]
+            nested_list_exog.append(sublist_exog)  # generate list of list
+
         # estimate model
-        irf_on, irf_off = lp.ThresholdPanelLPX(
-            data=df,
-            Y=cols_all_endog,
-            X=cols_all_exog,
-            threshold_var=threshold_variable + "_above_threshold",
-            response=cols_all_endog,
-            horizon=12,
-            lags=1,
-            varcov="kernel",
-            ci_width=0.8,
-        )
-        irf_on.to_parquet(
+        count_irf = 0
+        for list_endog, list_exog in tqdm(zip(nested_list_endog, nested_list_exog)):
+            irf_on, irf_off = lp.ThresholdPanelLPX(
+                data=df,
+                Y=list_endog,
+                X=list_exog,
+                threshold_var=threshold_variable + "_above_threshold",
+                response=list_endog,
+                horizon=12,
+                lags=1,
+                varcov="kernel",
+                ci_width=0.8,
+            )
+            # remove CIs from reference IRFs
+            for col in ["UB", "LB"]:
+                del irf_on[col]
+                del irf_off[col]
+            # rename irf
+            irf_on = irf_on.rename(
+                columns={"Mean": list_exog[-1]}
+            )  # since there are no base exog variables, otherwise take last
+            irf_off = irf_off.rename(
+                columns={"Mean": list_exog[-1]}
+            )  # since there are no base exog variables, otherwise take last
+            # consolidate
+            if count_irf == 0:
+                irf_consol_on = irf_on.copy()
+                irf_consol_off = irf_off.copy()
+            elif count_irf > 0:
+                irf_consol_on = irf_consol_on.merge(
+                    irf_on, on=["Shock", "Response", "Horizon"], how="outer"
+                )
+                irf_consol_off = irf_consol_off.merge(
+                    irf_off, on=["Shock", "Response", "Horizon"], how="outer"
+                )
+            # next
+            count_irf += 1
+        # Load reference IRF from another script
+        irf_total_on = pd.read_parquet(
             path_output
             + "panelthresholdlp_irf_on_"
             + "modwith_"
             + uncertainty_variable
             + "_"
-            + mp_variable 
+            + mp_variable
             + ".parquet"
         )
-        irf_off.to_parquet(
+        irf_total_off = pd.read_parquet(
             path_output
             + "panelthresholdlp_irf_off_"
             + "modwith_"
@@ -246,16 +408,38 @@ for mp_variable in tqdm(list_mp_variables):
             + mp_variable
             + ".parquet"
         )
+        # Rename reference IRFs
+        irf_total_on = irf_total_on.rename(columns={"Mean": "Total"})
+        irf_total_off = irf_total_off.rename(columns={"Mean": "Total"})
+        # Remove CIs from reference IRFs
+        for col in ["UB", "LB"]:
+            del irf_total_on[col]
+            del irf_total_off[col]
+        # Merge with LPX frame
+        irf_consol_on = irf_consol_on.merge(
+            irf_total_on, on=["Shock", "Response", "Horizon"], how="outer"
+        )
+        irf_consol_off = irf_consol_off.merge(
+            irf_total_off, on=["Shock", "Response", "Horizon"], how="outer"
+        )
+        # Compute channel sizes
+        for col in cols_all_endog:
+            irf_consol_on[col] = irf_consol_on["Total"] - irf_consol_on[col]
+            irf_consol_off[col] = irf_consol_off["Total"] - irf_consol_off[col]
+        irf_consol_on["Own"] = irf_consol_on["Total"] - irf_consol_on[cols_all_endog].sum(axis=1)
+        irf_consol_off["Own"] = irf_consol_off["Total"] - irf_consol_off[cols_all_endog].sum(axis=1)
         # plot irf
         for shock in [uncertainty_variable, mp_variable]:
-            fig = lp.ThresholdIRFPlot(
-                irf_threshold_on=irf_on,
-                irf_threshold_off=irf_off,
+            # on
+            fig_on = IRFPlotChannels(
+                irf=irf_consol_on,
                 response=cols_all_endog,
                 shock=[shock],
+                channels=cols_all_endog + ["Own"],
+                channel_colours=colours_all_endog,
                 n_columns=3,
                 n_rows=3,
-                maintitle="IRFs of "
+                maintitle="Decomposition Propagation Channels of IRFs of "
                 + shock
                 + " shocks when "
                 + threshold_variable
@@ -265,13 +449,44 @@ for mp_variable in tqdm(list_mp_variables):
                 + ")",
                 show_fig=False,
                 save_pic=False,
-                annot_size=12,
-                font_size=12,
             )
-            # save irf (need to use kaleido==0.1.0post1)
-            fig.write_image(
+            fig_on.write_image(
                 path_output
-                + "panelthresholdlp_irf_"
+                + "panelthresholdlp_irf_on_"
+                + "modwith_"
+                + uncertainty_variable
+                + "_"
+                + mp_variable
+                + "_"
+                + "shock"
+                + shock
+                + ".png",
+                height=768,
+                width=1366,
+            )
+            # off
+            fig_off = IRFPlotChannels(
+                irf=irf_consol_off,
+                response=cols_all_endog,
+                shock=[shock],
+                channels=cols_all_endog + ["Own"],
+                channel_colours=colours_all_endog,
+                n_columns=3,
+                n_rows=3,
+                maintitle="Decomposition Propagation Channels of IRFs of "
+                + shock
+                + " shocks when "
+                + threshold_variable
+                + " is below threshold"
+                + " (exog: "
+                + ", ".join(cols_all_exog)
+                + ")",
+                show_fig=False,
+                save_pic=False,
+            )
+            fig_off.write_image(
+                path_output
+                + "panelthresholdlp_irf_off_"
                 + "modwith_"
                 + uncertainty_variable
                 + "_"

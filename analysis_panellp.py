@@ -142,6 +142,15 @@ for mp_variable in tqdm(list_mp_variables):
             varcov="kernel",
             ci_width=0.8,
         )
+        irf.to_parquet(
+            path_output
+            + "panellp_irf_"
+            + "modwith_"
+            + uncertainty_variable
+            + "_"
+            + mp_variable
+            + ".parquet"
+        )
         # plot irf
         for shock in [uncertainty_variable, mp_variable]:
             fig = lp.IRFPlot(
