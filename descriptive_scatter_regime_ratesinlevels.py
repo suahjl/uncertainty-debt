@@ -272,9 +272,9 @@ if plot_pooled:
                 y_cols_nice=[y, y],
                 font_size=22,
                 marker_colours=["red", "black"],  # black and red for easy reference
-                marker_sizes=[3, 3],
+                marker_sizes=[4, 4],
                 best_fit_colours=["red", "black"],
-                best_fit_widths=[4, 4],
+                best_fit_widths=[5, 5],
                 main_title=(
                     "Pooled: "
                     + y

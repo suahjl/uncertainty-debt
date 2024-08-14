@@ -154,8 +154,8 @@ for mp_variable in tqdm(list_mp_variables):
         df = find_threshold(
             df=df,
             threshold_variable="hhdebt_ngdp",
-            option="dumb",
-            param_choice=61,
+            option="country_quantile",
+            param_choice=75 / 100,
         )
 
         # Reset index
