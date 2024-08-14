@@ -208,7 +208,7 @@ elif manual_data:
         df_global = df_global[["quarter", col]].copy()
         df = df.merge(df_global, on="quarter", how="outer")
     # Load FRED variables (as if global)
-    for col in ["us_expcpi_hh"]:
+    for col in ["us_expcpi_hh", "us_jln"]:
         df_fred = pd.read_csv(path_data + "fred_manual_download/" + col + ".txt")
         df_fred = process_fred_df(df=df_fred, col_label=col)
         df_fred = df_fred[["quarter", col]].copy()
