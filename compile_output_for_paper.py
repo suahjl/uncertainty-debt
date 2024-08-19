@@ -16,7 +16,7 @@ time_start = time.time()
 # 0 --- Main settings
 load_dotenv()
 path_output = "./output/"
-path_for_paper = "./output/for_paper/"
+path_for_paper = "./charts_for_papers/"
 
 # %%
 # I --- Function
