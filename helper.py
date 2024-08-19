@@ -717,6 +717,7 @@ def lineplot(
     line_dashes: list[str],
     main_title: str,
     font_size: int = 24,
+    show_legend: bool = True
 ):
     # prelims
     df = data.copy()
@@ -736,7 +737,7 @@ def lineplot(
                 name=y_col_nice,
                 mode="lines",
                 line=dict(color=line_colour, width=line_width, dash=line_dash),
-                # showlegend=False,
+                showlegend=show_legend,
             )
         )
     # layouts
@@ -1112,6 +1113,66 @@ def wide_grouped_barchart(
     if (custom_ymax is not None) & (custom_ymin is not None):
         fig.update_yaxes(range=[custom_ymin, custom_ymax])
     # output
+    return fig
+
+
+def stacked_area_lineplot(
+    data: pd.DataFrame,
+    x_col: str,
+    y_cols_area: list[str],
+    y_cols_area_nice: list[str],
+    y_cols_line: list[str],
+    y_cols_line_nice: list[str],
+    colours_area: list[str],
+    colours_line: list[str],
+    main_title: str,
+    font_size: int = 24,
+    drop_na: bool = True,
+):
+    # prelims
+    df = data.copy()
+    df = df[[x_col] + y_cols_area + y_cols_line]
+    if drop_na:
+        df = df.dropna(axis=0)  # drop rows
+
+    # base plot
+    fig = go.Figure()
+    # plot areas
+    for y_col_area, y_col_area_nice, colour_area in zip(
+        y_cols_area, y_cols_area_nice, colours_area
+    ):
+        fig.add_trace(
+            go.Scatter(
+                x=df[x_col],
+                y=df[y_col_area],
+                name=y_col_area_nice,
+                mode="lines",
+                fillcolor=colour_area,
+                line=dict(width=0.5, color=colour_area),
+                stackgroup="one",
+            )
+        )
+    # plot lines
+    for y_col_line, y_col_line_nice, colour_line in zip(
+        y_cols_line, y_cols_line_nice, colours_line
+    ):
+        fig.add_trace(
+            go.Scatter(
+                x=df[x_col],
+                y=df[y_col_line],
+                name=y_col_line_nice,
+                mode="lines",
+                line=dict(width=3, color=colour_line),
+            )
+        )
+    fig.update_layout(
+        title=main_title,
+        hovermode="x",
+        plot_bgcolor="white",
+        font=dict(size=font_size, color="black"),
+        height=768,
+        width=1366,
+    )
     return fig
 
 

@@ -298,10 +298,10 @@ if plot_pooled:
             pic_names += [pic_name]
             fig.write_image(
                 pic_name + ".png",
-                # height=768,
-                # width=1366,
-                height=1366,
-                width=1100,
+                height=768,
+                width=1366,
+                # height=1366,
+                # width=1100,
             )
     pdf_name = path_output + "scatter_regime_ratesinlevels_pooled"
     pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)

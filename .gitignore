@@ -173,6 +173,9 @@ cython_debug/
 /presentations/*
 /papers/*
 
+# not ignore specific subfolders or files
+!/output/for_paper/*
+
 # seasonal adjustment exe file
 x13as_ascii.exe
 
