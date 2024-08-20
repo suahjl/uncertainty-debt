@@ -292,6 +292,52 @@ for mp_variable in tqdm(list_mp_variables):
                         height=768,
                         width=1366,
                     )
+                    # only output and inflation
+                    for col in ["gdp", "corecpi"]:
+                        fig = lp.ThresholdIRFPlot(
+                            irf_threshold_on=irf_on,
+                            irf_threshold_off=irf_off,
+                            response=[col],
+                            shock=[shock],
+                            n_columns=1,
+                            n_rows=1,
+                            maintitle="US: IRFs of "
+                            + shock
+                            + " shocks when "
+                            + threshold_variables[0]
+                            + " is "
+                            + var0_nice
+                            + " and "
+                            + threshold_variables[1]
+                            + " is "
+                            + var1_nice,
+                            show_fig=False,
+                            save_pic=False,
+                            annot_size=12,
+                            font_size=16,
+                        )
+                        fig.write_image(
+                            path_output
+                            + "quadrant_thresholdlp_us_jln_irf_"
+                            + threshold_variables[0]
+                            + str(var0)
+                            + "_"
+                            + threshold_variables[1]
+                            + str(var1)
+                            + "modwith_"
+                            + uncertainty_variable
+                            + "_"
+                            + mp_variable
+                            + "_"
+                            + "shock"
+                            + shock
+                            + "_"
+                            + "response"
+                            + col
+                            + ".png",
+                            height=768,
+                            width=1366,
+                        )
                 # consolidate IRFs of all quadrants for combined plots later (only the red lines where H = 1)
                 irf_on[threshold_variables[0] + "_above_threshold"] = (
                     var0  # new columns to indicate if thresholdvar0 > tau
@@ -303,7 +349,7 @@ for mp_variable in tqdm(list_mp_variables):
                 irf_consol = pd.concat([irf_consol, irf_on], axis=0)
         irf_consol.to_parquet(
             path_output
-            + "quadrant_thresholdlp_irf_us_jln_"
+            + "quadrant_thresholdlp_us_jln_irf_"
             + "modwith_"
             + uncertainty_variable
             + "_"
@@ -425,7 +471,7 @@ for mp_variable in tqdm(list_mp_variables):
                         file_ci_suffix = ""
                     fig.write_image(
                         path_output
-                        + "quadrant_thresholdlp_irf_us_jln_"
+                        + "quadrant_thresholdlp_us_jln_irf_"
                         + "modwith_"
                         + uncertainty_variable
                         + "_"
