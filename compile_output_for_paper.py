@@ -55,6 +55,7 @@ selected_file_names = [
     "lineplot_maxminstir",
     "lineplot_ratesinlevels_epu",
     "lineplot_ratesinlevels_stir",
+    "output/thresholdselection_aicc_contour.png",
     "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu",
     "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
     "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",

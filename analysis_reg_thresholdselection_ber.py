@@ -305,8 +305,8 @@ for mp_variable in tqdm(list_mp_variables):
             title_fontsize=heatmaps_title_fontsize,
             annot_fontsize=heatmaps_annot_fontsize,
         )
-        df_loglik_fe.to_parquet(file_name + "_logliksearch" + ".parquet")
-        df_loglik_fe.to_csv(file_name + "_logliksearch" + ".csv", index=False)
+        df_aicc_fe.to_parquet(file_name + "_aiccsearch" + ".parquet")
+        df_aicc_fe.to_csv(file_name + "_aiccsearch" + ".csv", index=False)
 
 # %%
 # X --- Notify
