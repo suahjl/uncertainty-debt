@@ -13,6 +13,7 @@ from tabulate import tabulate
 import ruptures as rpt
 from chow_test import chow_test
 import warnings
+import plotly.graph_objects as go
 
 time_start = time.time()
 
@@ -73,9 +74,9 @@ for mp_variable in tqdm(list_mp_variables):
             # "epu",
             mp_variable,
             "stir",
-            "hhdebt",  # _ngdp
-            "corpdebt",  # _ngdp
-            "govdebt",  # _ngdp
+            # "hhdebt",  # _ngdp
+            # "corpdebt",  # _ngdp
+            # "govdebt",  # _ngdp
             "gdp",  # urate gdp
             # "capflows_ngdp",
             "corecpi",  # corecpi cpi
@@ -338,6 +339,18 @@ for mp_variable in tqdm(list_mp_variables):
         df = df.set_index(["country", "time"])
 
         # IV --- Analysis
+        irf_consol = pd.DataFrame(
+            columns=[
+                threshold_variables[0] + "_above_threshold",
+                threshold_variables[1] + "_above_threshold",
+                "Shock",
+                "Response",
+                "Horizon",
+                "Mean",
+                "LB",
+                "UB",
+            ]
+        )
         for var0, var0_nice in zip([0, 1], ["below threshold", "above threshold"]):
             for var1, var1_nice in zip([0, 1], ["below threshold", "above threshold"]):
                 # estimate model
@@ -399,10 +412,10 @@ for mp_variable in tqdm(list_mp_variables):
                         + threshold_variables[0]
                         + " is "
                         + var0_nice
-                        + " is above threshold"
-                        + " (exog: "
-                        + ", ".join(cols_all_exog)
-                        + ")",
+                        + " and "
+                        + threshold_variables[1]
+                        + " is "
+                        + var1_nice,
                         show_fig=False,
                         save_pic=False,
                         annot_size=12,
@@ -428,6 +441,159 @@ for mp_variable in tqdm(list_mp_variables):
                         height=768,
                         width=1366,
                     )
+                # consolidate IRFs of all quadrants for combined plots later (only the red lines where H = 1)
+                irf_on[threshold_variables[0] + "_above_threshold"] = (
+                    var0  # new columns to indicate if thresholdvar0 > tau
+                )
+                irf_on[threshold_variables[1] + "_above_threshold"] = (
+                    var1  # new columns to indicate if thresholdvar1 > tau
+                )
+                # merge
+                irf_consol = pd.concat([irf_consol, irf_on], axis=0)
+        irf_consol.to_parquet(
+            path_output
+            + "quadrant_panelthresholdlp_reduced_irf_"
+            + "modwith_"
+            + uncertainty_variable
+            + "_"
+            + mp_variable
+            + ".parquet"
+        )
+
+        # Replot IRFs variable by variable for all 4 regimes
+        def plot_quadrant_irf(show_ci: bool):
+            quadrant_colours = [
+                "black",
+                "lightgrey",
+                "cadetblue",
+                "red",
+            ]  # 00, 10, 01, 11
+            quadrant_width = [3, 2, 2, 3]  # 00, 10, 01, 11
+            for shock in [uncertainty_variable, mp_variable]:
+                for endog in cols_all_endog:
+                    fig = go.Figure()  # 4 lines per chart
+                    quadrant_count = 0
+                    for var0, var0_nice in zip(
+                        [0, 1], ["below threshold", "above threshold"]
+                    ):
+                        for var1, var1_nice in zip(
+                            [0, 1], ["below threshold", "above threshold"]
+                        ):
+                            # subset
+                            irf_sub = irf_consol[
+                                (
+                                    (irf_consol["Shock"] == shock)
+                                    & (irf_consol["Response"] == endog)
+                                    & (
+                                        irf_consol[
+                                            threshold_variables[0] + "_above_threshold"
+                                        ]
+                                        == var0
+                                    )
+                                    & (
+                                        irf_consol[
+                                            threshold_variables[1] + "_above_threshold"
+                                        ]
+                                        == var1
+                                    )
+                                )
+                            ].copy()
+                            # mean irf
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=irf_sub["Horizon"],
+                                    y=irf_sub["Mean"],
+                                    name=threshold_variables[0]
+                                    + " "
+                                    + var0_nice
+                                    + " and "
+                                    + threshold_variables[1]
+                                    + " "
+                                    + var1_nice,
+                                    mode="lines",
+                                    line=dict(
+                                        color=quadrant_colours[quadrant_count],
+                                        width=quadrant_width[quadrant_count],
+                                        dash="solid",
+                                    ),
+                                )
+                            )
+                            if show_ci:
+                                # lower bound
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=irf_sub["Horizon"],
+                                        y=irf_sub["LB"],
+                                        name="",
+                                        mode="lines",
+                                        line=dict(
+                                            color=quadrant_colours[quadrant_count],
+                                            width=1,
+                                            dash="dash",
+                                        ),
+                                    )
+                                )
+                                # upper bound
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=irf_sub["Horizon"],
+                                        y=irf_sub["UB"],
+                                        name="",
+                                        mode="lines",
+                                        line=dict(
+                                            color=quadrant_colours[quadrant_count],
+                                            width=1,
+                                            dash="dash",
+                                        ),
+                                    )
+                                )
+                            # next
+                            quadrant_count += 1
+                    # format
+                    fig.add_hline(
+                        y=0,
+                        line_dash="solid",
+                        line_color="darkgrey",
+                        line_width=1,
+                    )
+                    fig.update_layout(
+                        title="Panel threshold LP IRF: Response of "
+                        + endog
+                        + " to "
+                        + shock
+                        + " shocks",
+                        plot_bgcolor="white",
+                        hovermode="x unified",
+                        showlegend=True,
+                        font=dict(color="black", size=12),
+                    )
+                    # save image
+                    if show_ci:
+                        file_ci_suffix = "_withci"
+                    elif not show_ci:
+                        file_ci_suffix = ""
+                    fig.write_image(
+                        path_output
+                        + "quadrant_panelthresholdlp_reduced_irf_"
+                        + "modwith_"
+                        + uncertainty_variable
+                        + "_"
+                        + mp_variable
+                        + "_"
+                        + "shock"
+                        + shock
+                        + "_"
+                        + "response"
+                        + endog
+                        + file_ci_suffix
+                        + ".png",
+                        height=768,
+                        width=1366,
+                    )
+
+        plot_quadrant_irf(show_ci=False)
+        plot_quadrant_irf(show_ci=True)
+
 
 # %%
 # X --- Notify

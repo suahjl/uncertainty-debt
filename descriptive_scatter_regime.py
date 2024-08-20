@@ -109,57 +109,97 @@ del df["date"]
 # Drop NA
 df = df.dropna(axis=0)
 # Threshold
-threshold_variable = "hhdebt_ngdp"
 
 
-def find_threshold(
-    df: pd.DataFrame, threshold_variable: str, option: str, param_choice: float
+def find_quadrant_thresholds(
+    df: pd.DataFrame,
+    threshold_variables: list[str],
+    option: str,
+    param_choices: list[float],
 ):
     if option == "dumb":
         df.loc[
-            df[threshold_variable + "_ref"] >= param_choice,
-            threshold_variable + "_above_threshold",
+            df[threshold_variables[0] + "_ref"] >= param_choices[0],
+            threshold_variables[0] + "_above_threshold",
         ] = 1
         df.loc[
-            df[threshold_variable + "_ref"] < param_choice,
-            threshold_variable + "_above_threshold",
+            df[threshold_variables[0] + "_ref"] < param_choices[0],
+            threshold_variables[0] + "_above_threshold",
         ] = 0
-        print("Threshold is " + str(param_choice))
-    elif option == "global_quantile":
         df.loc[
-            df[threshold_variable + "_ref"]
-            >= df[threshold_variable + "_ref"].quantile(param_choice),
-            threshold_variable + "_above_threshold",
+            df[threshold_variables[1] + "_ref"] >= param_choices[1],
+            threshold_variables[0] + "_above_threshold",
         ] = 1
         df.loc[
-            df[threshold_variable + "_ref"]
-            < df[threshold_variable + "_ref"].quantile(param_choice),
-            threshold_variable + "_above_threshold",
+            df[threshold_variables[1] + "_ref"] < param_choices[1],
+            threshold_variables[1] + "_above_threshold",
         ] = 0
-        print(
-            "Threshold is "
-            + str(df[threshold_variable + "_ref"].quantile(param_choice))
-        )
-    elif option == "country_quantile":
-        ref = pd.DataFrame(
-            df.groupby("country")[threshold_variable + "_ref"].quantile(0.8)
-        ).reset_index()
-        ref = ref.rename(
-            columns={threshold_variable + "_ref": threshold_variable + "_threshold"}
-        )
-        df = df.merge(ref, how="left", on="country")
+        # quadrant 1 (0,0)
         df.loc[
-            df[threshold_variable + "_ref"] >= df[threshold_variable + "_threshold"],
-            threshold_variable + "_above_threshold",
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
         ] = 1
         df.loc[
-            df[threshold_variable + "_ref"] < df[threshold_variable + "_threshold"],
-            threshold_variable + "_above_threshold",
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
         ] = 0
+        # quadrant 2 (1,0)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
+        ] = 0
+        # quadrant 3 (0,1)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
+        ] = 0
+        # quadrant 4 (1,1)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
+        ] = 0
+        print("Threshold of " + threshold_variables[0] + " is " + str(param_choices[0]))
+        print("Threshold of " + threshold_variables[1] + " is " + str(param_choices[1]))
     elif option == "reg_thresholdselection":
         df_opt_threshold = pd.read_csv(
             path_output
-            + "reg_thresholdselection_fe_"
+            + "reg_quadrant_thresholdselection_fe_"
             + "modwith_"
             + uncertainty_variable
             + "_"
@@ -167,24 +207,106 @@ def find_threshold(
             + "_opt_threshold"
             + ".csv"
         )
-        opt_threshold = df_opt_threshold.iloc[0, 0]
+        opt_threshold0 = df_opt_threshold.iloc[0, 0]
+        opt_threshold1 = df_opt_threshold.iloc[0, 1]
+        # first
         df.loc[
-            df[threshold_variable + "_ref"] >= opt_threshold,
-            threshold_variable + "_above_threshold",
+            df[threshold_variables[0] + "_ref"] >= opt_threshold0,
+            threshold_variables[0] + "_above_threshold",
         ] = 1
         df.loc[
-            df[threshold_variable + "_ref"] < opt_threshold,
-            threshold_variable + "_above_threshold",
+            df[threshold_variables[0] + "_ref"] < opt_threshold0,
+            threshold_variables[0] + "_above_threshold",
         ] = 0
-        print("optimal threshold: " + threshold_variable + " = " + str(opt_threshold))
+        # second
+        df.loc[
+            df[threshold_variables[1] + "_ref"] >= opt_threshold1,
+            threshold_variables[1] + "_above_threshold",
+        ] = 1
+        df.loc[
+            df[threshold_variables[1] + "_ref"] < opt_threshold1,
+            threshold_variables[1] + "_above_threshold",
+        ] = 0
+        # quadrant 1 (0,0)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
+        ] = 0
+        # quadrant 2 (1,0)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 0)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
+        ] = 0
+        # quadrant 3 (0,1)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 0)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
+        ] = 0
+        # quadrant 4 (1,1)
+        df.loc[
+            (
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
+        ] = 1
+        df.loc[
+            ~(
+                (df[threshold_variables[0] + "_above_threshold"] == 1)
+                & (df[threshold_variables[1] + "_above_threshold"] == 1)
+            ),
+            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
+        ] = 0
+        print(
+            "optimal thresholds: "
+            + threshold_variables[0]
+            + " = "
+            + str(opt_threshold0)
+            + " and "
+            + threshold_variables[1]
+            + " = "
+            + str(opt_threshold1)
+        )
     return df
 
 
-df = find_threshold(
+# Threshold
+threshold_variables = ["hhdebt_ngdp", "govdebt_ngdp"]
+df = find_quadrant_thresholds(
     df=df,
-    threshold_variable="hhdebt_ngdp",
+    threshold_variables=threshold_variables,
     option="reg_thresholdselection",
-    param_choice=0,
+    param_choices=[0, 0],
 )
 
 # Reset index
@@ -195,103 +317,123 @@ df = df.reset_index(drop=True)
 plot_cbyc = False
 if plot_cbyc:
     pic_names = []
-    for x in ["epu", "maxminepu", "maxminstir"]:
-        for y in tqdm(cols_all):
-            # split x-axis columns into when H = 0 and H = 1
-            df.loc[
-                df[threshold_variable + "_above_threshold"] == 1,
-                x + "_when_" + threshold_variable + "_is_above_threshold",
-            ] = df[x].copy()
-            df.loc[
-                df[threshold_variable + "_above_threshold"] == 0,
-                x + "_when_" + threshold_variable + "_is_below_threshold",
-            ] = df[x].copy()
-            fig = subplots_scatterplots(
-                data=df,
-                col_group="country",
-                cols_x=[
+    for threshold_variable in threshold_variables:
+        for x in ["epu", "maxminepu", "maxminstir"]:
+            for y in tqdm(cols_all):
+                # split x-axis columns into when H = 0 and H = 1
+                df.loc[
+                    df[threshold_variable + "_above_threshold"] == 1,
                     x + "_when_" + threshold_variable + "_is_above_threshold",
+                ] = df[x].copy()
+                df.loc[
+                    df[threshold_variable + "_above_threshold"] == 0,
                     x + "_when_" + threshold_variable + "_is_below_threshold",
-                ],
-                cols_y=[y, y],
-                annot_size=9,
-                font_size=9,
-                marker_colours=["red", "black"],  # black and red for easy reference
-                marker_sizes=[3, 3],
-                include_best_fit=True,
-                best_fit_colours=["red", "black"],
-                best_fit_widths=[2, 2],
-                main_title=y
-                + " against "
-                + x
-                + " when "
-                + threshold_variable
-                + " is above and below threshold",
-                maxrows=5,
-                maxcols=4,
-                add_horizontal_at_yzero=True,
-                add_vertical_at_xzero=True,
-            )
-            pic_name = path_output + "scatter_regime" + "_" + y + "_against_" + x
-            pic_names += [pic_name]
-            fig.write_image(
-                pic_name + ".png",
-                height=768,
-                width=1366,
-            )
+                ] = df[x].copy()
+                fig = subplots_scatterplots(
+                    data=df,
+                    col_group="country",
+                    cols_x=[
+                        x + "_when_" + threshold_variable + "_is_above_threshold",
+                        x + "_when_" + threshold_variable + "_is_below_threshold",
+                    ],
+                    cols_y=[y, y],
+                    annot_size=9,
+                    font_size=9,
+                    marker_colours=["red", "black"],  # black and red for easy reference
+                    marker_sizes=[3, 3],
+                    include_best_fit=True,
+                    best_fit_colours=["red", "black"],
+                    best_fit_widths=[2, 2],
+                    main_title=y
+                    + " against "
+                    + x
+                    + " when "
+                    + threshold_variable
+                    + " is above and below threshold",
+                    maxrows=5,
+                    maxcols=4,
+                    add_horizontal_at_yzero=True,
+                    add_vertical_at_xzero=True,
+                )
+                pic_name = (
+                    path_output
+                    + "scatter_regime"
+                    + "_"
+                    + threshold_variable
+                    + "_"
+                    + y
+                    + "_against_"
+                    + x
+                )
+                pic_names += [pic_name]
+                fig.write_image(
+                    pic_name + ".png",
+                    height=768,
+                    width=1366,
+                )
     pdf_name = path_output + "scatter_regime"
     pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
 
 plot_pooled = True
 if plot_pooled:
     pic_names = []
-    for x in ["epu", "maxminepu", "maxminstir"]:
-        for y in tqdm(cols_all):
-            # split x-axis columns into when H = 0 and H = 1
-            df.loc[
-                df[threshold_variable + "_above_threshold"] == 1,
-                x + "_when_" + threshold_variable + "_is_above_threshold",
-            ] = df[x].copy()
-            df.loc[
-                df[threshold_variable + "_above_threshold"] == 0,
-                x + "_when_" + threshold_variable + "_is_below_threshold",
-            ] = df[x].copy()
-            fig = scatterplot_layered(
-                data=df,
-                x_cols=[
+    for threshold_variable in threshold_variables:
+        for x in ["epu", "maxminepu", "maxminstir"]:
+            for y in tqdm(cols_all):
+                # split x-axis columns into when H = 0 and H = 1
+                df.loc[
+                    df[threshold_variable + "_above_threshold"] == 1,
                     x + "_when_" + threshold_variable + "_is_above_threshold",
+                ] = df[x].copy()
+                df.loc[
+                    df[threshold_variable + "_above_threshold"] == 0,
                     x + "_when_" + threshold_variable + "_is_below_threshold",
-                ],
-                x_cols_nice=[
-                    x + " when " + threshold_variable + " is above threshold",
-                    x + " when " + threshold_variable + " is below threshold",
-                ],
-                y_cols=[y, y],
-                y_cols_nice=[y, y],
-                font_size=22,
-                marker_colours=["red", "black"],  # black and red for easy reference
-                marker_sizes=[3, 3],
-                best_fit_colours=["red", "black"],
-                best_fit_widths=[4, 4],
-                main_title=(
-                    "Pooled: "
-                    + y
-                    + " against "
-                    + x
-                    + " when "
+                ] = df[x].copy()
+                fig = scatterplot_layered(
+                    data=df,
+                    x_cols=[
+                        x + "_when_" + threshold_variable + "_is_above_threshold",
+                        x + "_when_" + threshold_variable + "_is_below_threshold",
+                    ],
+                    x_cols_nice=[
+                        x + " when " + threshold_variable + " is above threshold",
+                        x + " when " + threshold_variable + " is below threshold",
+                    ],
+                    y_cols=[y, y],
+                    y_cols_nice=[y, y],
+                    font_size=22,
+                    marker_colours=["red", "black"],  # black and red for easy reference
+                    marker_sizes=[3, 3],
+                    best_fit_colours=["red", "black"],
+                    best_fit_widths=[4, 4],
+                    main_title=(
+                        "Pooled: "
+                        + y
+                        + " against "
+                        + x
+                        + " when "
+                        + threshold_variable
+                        + " is above and below threshold"
+                    ),
+                    add_horizontal_at_yzero=True,
+                    add_vertical_at_xzero=True,
+                )
+                pic_name = (
+                    path_output
+                    + "scatter_regime"
+                    + "_"
                     + threshold_variable
-                    + " is above and below threshold"
-                ),
-                add_horizontal_at_yzero=True,
-                add_vertical_at_xzero=True,
-            )
-            pic_name = path_output + "scatter_regime_pooled" + "_" + y + "_against_" + x
-            pic_names += [pic_name]
-            fig.write_image(
-                pic_name + ".png",
-                height=768,
-                width=1366,
-            )
+                    + "_"
+                    + y
+                    + "_against_"
+                    + x
+                )
+                pic_names += [pic_name]
+                fig.write_image(
+                    pic_name + ".png",
+                    height=768,
+                    width=1366,
+                )
     pdf_name = path_output + "scatter_regime_pooled"
     pil_img2pdf(list_images=pic_names, extension="png", pdf_name=pdf_name)
 
