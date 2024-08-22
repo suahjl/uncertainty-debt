@@ -1150,6 +1150,7 @@ def stacked_area_lineplot(
                 fillcolor=colour_area,
                 line=dict(width=0.5, color=colour_area),
                 stackgroup="one",
+                fill='tonexty'
             )
         )
     # plot lines
