@@ -246,6 +246,52 @@ df_quantile.to_csv(
 )
 
 # %%
+# --- Country-by-country summaries of hh and gov debt
+df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
+df = df[
+    ["country", "quarter", "hhdebt_ngdp_ref", "corpdebt_ngdp_ref", "govdebt_ngdp_ref"]
+]
+countries_keep = [
+    "australia",
+    "belgium",
+    "canada",
+    "france",
+    "greece",
+    "ireland",
+    "italy",
+    "japan",
+    "mexico",
+    "netherlands",
+    "russian_federation",
+    "singapore",
+    "spain",
+    "united_states"
+]  # 14 countries
+df = df[df["country"].isin(countries_keep)].copy()
+df = df.dropna()
+df = df.reset_index(drop=True)
+hhdebt_threshold = 60.5
+govdebt_threshold = 95
+for col in ["hhdebt", "govdebt"]:
+    sumstats = pd.DataFrame(df.groupby("country")[col + "_ngdp_ref"].describe())
+    sumstats = sumstats[["min", "25%", "50%", "75%", "max"]].copy()
+    fig = heatmap(
+        input=sumstats,
+        mask=False,
+        colourmap="vlag",
+        outputfile="./output/heatmap_cbyc_" + col + ".png",
+        title="",
+        format=".2f",
+        lb=20,
+        ub=140,
+        show_annot=True,
+        y_fontsize=12,
+        x_fontsize=12,
+        title_fontsize=12,
+        annot_fontsize=12
+    )
+
+# %%
 # X --- Notify
 # End
 print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds -----")

@@ -233,7 +233,7 @@ def quadrant_thresholdsearch_fe(
         cov_choice="robust",
     )
     # output
-    return params_table, threshold0_optimal, threshold1_optimal, df_loglik, df_aicc
+    return params_table, joint_teststats, threshold0_optimal, threshold1_optimal, df_loglik, df_aicc
 
 
 def check_balance_timing(input):
@@ -343,6 +343,7 @@ for mp_variable in tqdm(list_mp_variables):
         # estimate model
         (
             params_table_fe,
+            joint_teststats_fe,
             threshold0_optimal_fe,
             threshold1_optimal_fe,
             df_loglik_fe,
@@ -438,6 +439,23 @@ for mp_variable in tqdm(list_mp_variables):
             title_fontsize=heatmaps_title_fontsize,
             annot_fontsize=heatmaps_annot_fontsize,
         )
+        fig = heatmap(
+            input=joint_teststats_fe,
+            mask=False,
+            colourmap="vlag",
+            outputfile=file_name + "_joint_teststats" + ".png",
+            title=chart_title,
+            lb=params_table_fe.min().min(),
+            ub=params_table_fe.max().max(),
+            format=".4f",
+            show_annot=True,
+            y_fontsize=heatmaps_y_fontsize,
+            x_fontsize=heatmaps_x_fontsize,
+            title_fontsize=heatmaps_title_fontsize,
+            annot_fontsize=heatmaps_annot_fontsize,
+        )
+        params_table_fe.to_csv(file_name + ".csv")
+        joint_teststats_fe.to_csv(file_name+ "_joint_teststats" + ".csv")
         df_aicc_fe.to_parquet(file_name + "_aiccsearch" + ".parquet")
         df_aicc_fe.to_csv(file_name + "_aiccsearch" + ".csv", index=False)
 

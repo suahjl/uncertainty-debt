@@ -402,8 +402,8 @@ def fe_reg(
     print(res.summary)
 
     # Return estimated parameters
-    params_table = pd.concat([res.params, res.std_errors], axis=1)
-    params_table.columns = ["Parameter", "SE"]
+    params_table = pd.concat([res.params, res.std_errors, res.pvalues], axis=1)
+    params_table.columns = ["Parameter", "SE", "P-Value"]
     params_table["LowerCI"] = params_table["Parameter"] - 1.96 * params_table["SE"]
     params_table["UpperCI"] = params_table["Parameter"] + 1.96 * params_table["SE"]
 
