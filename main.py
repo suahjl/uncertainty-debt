@@ -29,6 +29,7 @@ import descriptive_scatter_ratesinlevels
 
 # %%
 import analysis_reg_quadrant_thresholdselection
+import analysis_reg_quadrant_thresholdselection_onewayshocks
 import analysis_reg_quadrant_thresholdselection_reduced
 import analysis_reg_quadrant_thresholdselection_ltir
 import analysis_reg_quadrant_thresholdselection_ltir_reduced
@@ -37,6 +38,7 @@ import analysis_reg_quadrant_thresholdselection_m2_reduced
 
 # %%
 import analysis_quadrant_panelthresholdlp
+import analysis_quadrant_panelthresholdlp_onewayshocks
 import analysis_quadrant_panelthresholdlp_reduced
 import analysis_quadrant_panelthresholdlp_ltir
 import analysis_quadrant_panelthresholdlp_ltir_reduced
