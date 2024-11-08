@@ -41,6 +41,7 @@ def do_everything_quadrant_panelthresholdlp(
     list_mp_variables: list[str],
     list_uncertainty_variables: list[str],
     cols_threshold: list[str],
+    threshold_variables: list[str],
     countries_drop: list[str],
     file_suffixes: str,  # format: "abc_" or ""
 ):
@@ -360,7 +361,6 @@ def do_everything_quadrant_panelthresholdlp(
                 return df
 
             # Threshold
-            threshold_variables = ["hhdebt_ngdp", "govdebt_ngdp"]
             df = find_quadrant_thresholds(
                 df=df,
                 threshold_variables=threshold_variables,
@@ -714,7 +714,8 @@ cols_endog_short = [
     "corecpi",  # corecpi cpi
     "reer",
 ]
-cols_threshold_hh_gov = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
+cols_threshold_hh_gov_ref = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
+cols_threshold_hh_gov = ["hhdebt_ngdp", "govdebt_ngdp"]
 
 # With STIR
 do_everything_quadrant_panelthresholdlp(
@@ -722,7 +723,8 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -739,7 +741,8 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -757,14 +760,15 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2012 Q1
-            "china",  # 2007 Q1 and potentially exclusive case
-            "chile",  # 2010 Q1 and potentially exclusive case
-            "colombia",  # 2005 Q4
-            "singapore",  # 2005 Q1
-        ], 
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
     file_suffixes="m2_",  # format: "abc_" or ""
 )
 # With M2 (reduced)
@@ -773,14 +777,15 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2012 Q1
-            "china",  # 2007 Q1 and potentially exclusive case
-            "chile",  # 2010 Q1 and potentially exclusive case
-            "colombia",  # 2005 Q4
-            "singapore",  # 2005 Q1
-        ], 
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
     file_suffixes="m2_reduced_",  # format: "abc_" or ""
 )
 
@@ -790,15 +795,16 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2016 Q3
-            "denmark",  # ends 2019 Q3
-            "china",  # 2007 Q4 and potentially exclusive case
-            "chile",  #  2010Q1
-            "colombia",  # 2005 Q4
-            "germany",  # 2006 Q1
-        ], 
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "chile",  #  2010Q1
+        "colombia",  # 2005 Q4
+        "germany",  # 2006 Q1
+    ],
     file_suffixes="ltir_",  # format: "abc_" or ""
 )
 # With LTIR (reduced)
@@ -807,15 +813,16 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2016 Q3
-            "denmark",  # ends 2019 Q3
-            "china",  # 2007 Q4 and potentially exclusive case
-            "chile",  #  2010Q1
-            "colombia",  # 2005 Q4
-            "germany",  # 2006 Q1
-        ], 
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "chile",  #  2010Q1
+        "colombia",  # 2005 Q4
+        "germany",  # 2006 Q1
+    ],
     file_suffixes="ltir_reduced_",  # format: "abc_" or ""
 )
 
@@ -825,15 +832,16 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2016 Q3
-            "denmark",  # ends 2019 Q3
-            "china",  # 2007 Q4 and potentially exclusive case
-            "colombia",  # 2006 Q4
-            "germany",  # 2006 Q1
-            "sweden",  # ends 2020 Q3 --- epu
-        ], 
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
     file_suffixes="",  # format: "abc_" or ""
 )
 # With oneway STIR shocks (reduced)
@@ -842,15 +850,16 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2016 Q3
-            "denmark",  # ends 2019 Q3
-            "china",  # 2007 Q4 and potentially exclusive case
-            "colombia",  # 2006 Q4
-            "germany",  # 2006 Q1
-            "sweden",  # ends 2020 Q3 --- epu
-        ], 
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
     file_suffixes="reduced_",  # format: "abc_" or ""
 )
 
@@ -860,14 +869,15 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2012 Q1
-            "china",  # 2007 Q1 and potentially exclusive case
-            "chile",  # 2010 Q1 and potentially exclusive case
-            "colombia",  # 2005 Q4
-            "singapore",  # 2005 Q1
-        ], 
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
     file_suffixes="m2_",  # format: "abc_" or ""
 )
 # With oneway M2 shocks (reduced)
@@ -876,17 +886,17 @@ do_everything_quadrant_panelthresholdlp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_hh_gov_ref,
+    threshold_variables=cols_threshold_hh_gov,
     countries_drop=[
-            "india",  # 2012 Q1
-            "china",  # 2007 Q1 and potentially exclusive case
-            "chile",  # 2010 Q1 and potentially exclusive case
-            "colombia",  # 2005 Q4
-            "singapore",  # 2005 Q1
-        ], 
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
     file_suffixes="m2_reduced_",  # format: "abc_" or ""
 )
-
 
 
 # %%
