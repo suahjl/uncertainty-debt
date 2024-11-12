@@ -34,6 +34,9 @@ import analysis_reg_quadrant_thresholdselection_consol
 import analysis_reg_quadrant_thresholdselection_consol
 
 # %%
+import analysis_quadrant_interaction_panellp_consol
+
+# %%
 import descriptive_scatter_regime
 import descriptive_scatter_regime_ratesinlevels
 import descriptive_special_charts
