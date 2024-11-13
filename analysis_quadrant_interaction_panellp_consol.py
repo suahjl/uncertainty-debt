@@ -47,6 +47,7 @@ def do_everything_quadrant_interaction_panellp(
     irf_colours_for_each_beta: list[str],
     t_start: date = date(1990, 1, 1),
     t_end: date = None,
+    input_df_suffix="yoy",
 ):
     # Nested functions
     def check_balance_timing(input):
@@ -318,7 +319,9 @@ def do_everything_quadrant_interaction_panellp(
             print("\nMP variable is " + mp_variable)
             print("Uncertainty variable is " + uncertainty_variable)
             # II --- Load data
-            df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
+            df = pd.read_parquet(
+                path_data + "data_macro_" + input_df_suffix + ".parquet"
+            )
             # III --- Additional wrangling
             # Groupby ref
             cols_groups = ["country", "quarter"]
@@ -739,7 +742,7 @@ do_everything_quadrant_interaction_panellp(
     file_suffixes="postgfc_",  # format: "abc_" or ""
     beta_values_to_simulate=debt_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_start=date(2012, 1, 1)
+    t_start=date(2012, 1, 1),
 )
 
 # With STIR (reduced)
@@ -761,7 +764,7 @@ do_everything_quadrant_interaction_panellp(
     file_suffixes="reduced_postgfc_",  # format: "abc_" or ""
     beta_values_to_simulate=debt_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_start=date(2012, 1, 1)
+    t_start=date(2012, 1, 1),
 )
 
 # Pre-COVID
@@ -784,7 +787,7 @@ do_everything_quadrant_interaction_panellp(
     file_suffixes="precovid_",  # format: "abc_" or ""
     beta_values_to_simulate=debt_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_end=date(2019, 12, 31)
+    t_end=date(2019, 12, 31),
 )
 
 # With STIR (reduced)
@@ -806,11 +809,12 @@ do_everything_quadrant_interaction_panellp(
     file_suffixes="reduced_precovid_",  # format: "abc_" or ""
     beta_values_to_simulate=debt_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_end=date(2019, 12, 31)
+    t_end=date(2019, 12, 31),
 )
 
+
 # %%
-# V --- Do everything but with WUI as uncertainty shock
+# V --- Do everything but with WUI
 # With STIR
 do_everything_quadrant_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
@@ -820,41 +824,64 @@ do_everything_quadrant_interaction_panellp(
     cols_state_dependency=cols_threshold_hh_gov,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
+        "argentina",
+        "china",
+        "germany",
+        "india",
+        "indonesia",
+        "israel",
+        "malaysia",
+        "turkey",
+        "thailand",
+        "denmark",
+        "norway",
+        "sweden",
     ],
     file_suffixes="",  # format: "abc_" or ""
     beta_values_to_simulate=debt_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-)
-
-# With M2
-do_everything_quadrant_interaction_panellp(
-    cols_endog_after_shocks=["m2"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminm2"],
-    list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov,
-    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-    countries_drop=[
-        "india",  # 2012 Q1
-        "china",  # 2007 Q1 and potentially exclusive case
-        "chile",  # 2010 Q1 and potentially exclusive case
-        "colombia",  # 2005 Q4
-        "singapore",  # 2005 Q1
-    ],
-    file_suffixes="m2_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    input_df_suffix="large_yoy"  # different data set
 )
 
 # %%
 # X --- Notify
 # End
 print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds -----")
+
+# %%
+# TESTING
+df = pd.read_parquet(path_data + "data_macro_large_yoy.parquet")
+df = df[["country", "quarter", "stir", "maxminbrent"] + cols_endog_long]
+def check_balance_timing(input):
+    min_quarter_by_country = input.copy()
+    min_quarter_by_country = min_quarter_by_country.dropna(axis=0)
+    min_quarter_by_country = (
+        min_quarter_by_country.groupby("country")["quarter"].min().reset_index()
+    )
+    print(tabulate(min_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+def check_balance_endtiming(input):
+    max_quarter_by_country = input.copy()
+    max_quarter_by_country = max_quarter_by_country.dropna(axis=0)
+    max_quarter_by_country = (
+        max_quarter_by_country.groupby("country")["quarter"].max().reset_index()
+    )
+    print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
+check_balance_timing(df)
+check_balance_endtiming(df)
+countries_drop = [
+    "argentina",
+    "china",
+    "germany",
+    "india",
+    "indonesia",
+    "israel",
+    "malaysia",
+    "turkey",
+    "thailand",
+    "denmark",
+    "norway",
+    "sweden",
+]
 
 # %%

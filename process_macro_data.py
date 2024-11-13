@@ -10,6 +10,7 @@ import time
 import os
 from dotenv import load_dotenv
 import ast
+from tabulate import tabulate
 
 time_start = time.time()
 
@@ -23,43 +24,166 @@ tel_config = os.getenv("TEL_CONFIG")
 t_start = date(1990, 1, 1)
 manual_data = ast.literal_eval(os.getenv("MANUAL_DOWNLOAD_DATA"))
 
+
 # %%
 # I --- Function
-def wrangle_data(option: str):
+def check_balance_timing(input):
+    min_quarter_by_country = input.copy()
+    min_quarter_by_country = min_quarter_by_country.dropna(axis=0)
+    min_quarter_by_country = (
+        min_quarter_by_country.groupby("country")["quarter"].min().reset_index()
+    )
+    print(tabulate(min_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+
+def check_balance_endtiming(input):
+    max_quarter_by_country = input.copy()
+    max_quarter_by_country = max_quarter_by_country.dropna(axis=0)
+    max_quarter_by_country = (
+        max_quarter_by_country.groupby("country")["quarter"].max().reset_index()
+    )
+    print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+
+def wrangle_data(option: str, country_coverage="epu"):
     # Load data
     df = pd.read_parquet(path_data + "data_macro_raw.parquet")
     # Check countries with domestic EPU
     # df.loc[~(df["epu"].isna()), :].copy()["country"].unique()
     # Reduce countries (exclude aggregates)
-    list_countries_keep = [
-        "australia",
-        "belgium",
-        "brazil",
-        "canada",
-        "chile",
-        "china",
-        "colombia",
-        "croatia",
-        "denmark",
-        "france",
-        "germany",
-        "greece",
-        "hong_kong_sar_china_",
-        "india",
-        "ireland",
-        "italy",
-        "japan",
-        "mexico",
-        "netherlands",
-        "pakistan",
-        "russian_federation",
-        "singapore",
-        "south_korea",
-        "spain",
-        "sweden",
-        "united_kingdom",
-        "united_states",
-    ]
+    if country_coverage == "epu":
+        list_countries_keep = [
+            "australia",
+            "belgium",
+            "brazil",
+            "canada",
+            "chile",
+            "china",
+            "colombia",
+            "croatia",
+            "denmark",
+            "france",
+            "germany",
+            "greece",
+            "hong_kong_sar_china_",
+            "india",
+            "ireland",
+            "italy",
+            "japan",
+            "mexico",
+            "netherlands",
+            "pakistan",
+            "russian_federation",
+            "singapore",
+            "south_korea",
+            "spain",
+            "sweden",
+            "united_kingdom",
+            "united_states",
+        ]
+    elif country_coverage == "wui":
+        list_countries_keep = [
+            "albania",
+            "algeria",
+            "argentina",
+            "armenia",
+            "australia",
+            "austria",
+            "azerbaijan",
+            "bangladesh",
+            "belarus",
+            "belgium",
+            "bolivia",
+            "bosnia_and_herzegovina",
+            "botswana",
+            "brazil",
+            "bulgaria",
+            "cambodia",
+            "canada",
+            "chile",
+            "china",
+            "colombia",
+            "croatia",
+            "czech_republic",
+            "denmark",
+            "ecuador",
+            "egypt",
+            "finland",
+            "france",
+            "georgia",
+            "germany",
+            "ghana",
+            "greece",
+            "hong_kong_sar_china_",
+            "hungary",
+            "india",
+            "indonesia",
+            "iran",
+            "ireland",
+            "israel",
+            "italy",
+            "ivory_coast",
+            "japan",
+            "jordan",
+            "kazakhstan",
+            "kenya",
+            "kuwait",
+            "kyrgyzstan",
+            "laos",
+            "latvia",
+            "lebanon",
+            "lithuania",
+            "malawi",
+            "malaysia",
+            "mexico",
+            "moldova",
+            "mongolia",
+            "morocco",
+            "mozambique",
+            "myanmar",
+            "nepal",
+            "netherlands",
+            "new_zealand",
+            "nigeria",
+            "north_macedonia",
+            "norway",
+            "oman",
+            "pakistan",
+            "panama",
+            "paraguay",
+            "peru",
+            "philippines",
+            "poland",
+            "portugal",
+            "qatar",
+            "romania",
+            "saudi_arabia",
+            "singapore",
+            "slovakia",
+            "slovenia",
+            "south_africa",
+            "south_korea",
+            "spain",
+            "sri_lanka",
+            "sudan",
+            "sweden",
+            "switzerland",
+            "taiwan",
+            "tajikistan",
+            "thailand",
+            "tunisia",
+            "turkey",
+            "ukraine",
+            "united_arab_emirates",
+            "united_kingdom",
+            "united_states",
+            "uruguay",
+            "uzbekistan",
+            "venezuela",
+            "vietnam",
+            "yemen",
+            "zambia",
+        ]
     df = df[df["country"].isin(list_countries_keep)].copy()
     df = df.reset_index(drop=True)
     # Relative to nominal GDP in USD
@@ -67,7 +191,9 @@ def wrangle_data(option: str):
     for col in ["fdi", "pi_debt", "pi_equity", "fxr"]:
         df[col + "_ngdp"] = 100 * (df[col] / df["ngdp_usd_nsa"])
     # debt is in bil (use 4q rolling sum for denominator)
-    df["ngdp_usd_nsa_4qrollsum"] = df.groupby("country")["ngdp_usd_nsa"].rolling(4).sum().reset_index(drop=True)
+    df["ngdp_usd_nsa_4qrollsum"] = (
+        df.groupby("country")["ngdp_usd_nsa"].rolling(4).sum().reset_index(drop=True)
+    )
     for col in ["privdebt", "govdebt", "hhdebt", "corpdebt"]:
         df[col + "_ngdp"] = 100 * ((1000 * df[col]) / df["ngdp_usd_nsa_4qrollsum"])
     # Retain these columns as levels for reference later
@@ -85,7 +211,7 @@ def wrangle_data(option: str):
         "hhdebt",
         "corpdebt",
         "fxr",
-        "brent"
+        "brent",
     ]:
         df[col] = 100 * ((df[col] / df.groupby("country")[col].shift(4)) - 1)
     # YoY diff
@@ -93,7 +219,10 @@ def wrangle_data(option: str):
     cols_stock_ngdp = [
         i + "_ngdp" for i in ["fxr", "privdebt", "govdebt", "hhdebt", "corpdebt"]
     ]
-    cols_rates = ["urate", "policyrate", "stir", "ltir", "blr", "stgby"] + ["epu", "wui"]  # uncertainty
+    cols_rates = ["urate", "policyrate", "stir", "ltir", "blr", "stgby"] + [
+        "epu",
+        "wui",
+    ]  # uncertainty
     if option == "yoy":
         for col in cols_rates + cols_stock_ngdp + cols_flow_ngdp:
             df[col] = df[col] - df.groupby("country")[col].shift(4)
@@ -103,6 +232,7 @@ def wrangle_data(option: str):
     # Capital flows
     df["pi_ngdp"] = df["pi_equity_ngdp"] + df["pi_debt_ngdp"]
     df["capflows_ngdp"] = df["pi_equity_ngdp"] + df["pi_debt_ngdp"] + df["fdi_ngdp"]
+
     # Nested functions to calculate shocks
     def hamilton_shock(col: str, option: str):
         df["_zero"] = 0
@@ -118,7 +248,7 @@ def wrangle_data(option: str):
         df["max" + col] = df[["_zero", "_z"]].max(axis=1)
         for i in ["_zero", "_x", "_z"] + col_x_cands:
             del df[i]
-    
+
     def reverse_hamilton_shock(col: str, option: str):
         df["_zero"] = 0
         col_x_cands = []
@@ -168,14 +298,24 @@ def wrangle_data(option: str):
     # Generate processed output
     return df
 
+
 # %%
 # II --- Wrangle YoY
-# Wrangle
+# Wrangle using EPU data coverage
 df_yoy = wrangle_data(option="yoy")
 df_yoy_ratesinlevels = wrangle_data(option="yoy_ratesinlevels")
+# Wrangle using WUI data coverage
+df_large_yoy = wrangle_data(option="yoy", country_coverage="wui")
+df_large_yoy_ratesinlevels = wrangle_data(
+    option="yoy_ratesinlevels", country_coverage="wui"
+)
 # Save processed output
 df_yoy.to_parquet(path_data + "data_macro_yoy" + ".parquet")
 df_yoy_ratesinlevels.to_parquet(path_data + "data_macro_yoy_ratesinlevels" + ".parquet")
+df_large_yoy.to_parquet(path_data + "data_macro_large_yoy" + ".parquet")
+df_large_yoy_ratesinlevels.to_parquet(
+    path_data + "data_macro_large_yoy_ratesinlevels" + ".parquet"
+)
 
 # %%
 # X --- Notify
