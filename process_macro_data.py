@@ -73,7 +73,7 @@ def wrangle_data(option: str):
     # Retain these columns as levels for reference later
     for col in ["privdebt", "govdebt", "hhdebt", "corpdebt"]:
         df[col + "_ngdp" + "_ref"] = df[col + "_ngdp"].copy()
-    for col in ["epu"]:
+    for col in ["epu", "wui"]:  # uncertainty
         df[col + "_ref"] = df[col].copy()
     # YoY growth
     for col in [
@@ -93,7 +93,7 @@ def wrangle_data(option: str):
     cols_stock_ngdp = [
         i + "_ngdp" for i in ["fxr", "privdebt", "govdebt", "hhdebt", "corpdebt"]
     ]
-    cols_rates = ["urate", "policyrate", "stir", "ltir", "blr", "stgby"] + ["epu"]
+    cols_rates = ["urate", "policyrate", "stir", "ltir", "blr", "stgby"] + ["epu", "wui"]  # uncertainty
     if option == "yoy":
         for col in cols_rates + cols_stock_ngdp + cols_flow_ngdp:
             df[col] = df[col] - df.groupby("country")[col].shift(4)
@@ -155,7 +155,7 @@ def wrangle_data(option: str):
             del df[i]
 
     # Diff shocks
-    for col in ["epu", "stir", "ltir", "m2", "us_jln"]:
+    for col in ["epu", "wui", "stir", "ltir", "m2", "us_jln"]:  # uncertainty
         hamilton_shock(col, option="diff")
         reverse_hamilton_shock(col, option="diff")
         twoway_hamilton_shock(col, option="diff")

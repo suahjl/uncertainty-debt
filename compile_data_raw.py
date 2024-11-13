@@ -30,10 +30,135 @@ path_ceic = "./ceic/"
 tel_config = os.getenv("TEL_CONFIG")
 t_start = date(1990, 1, 1)
 manual_data = ast.literal_eval(os.getenv("MANUAL_DOWNLOAD_DATA"))
+use_frozen_processed_data = ast.literal_eval(os.getenv("USE_FROZEN_PROCESSED_DATA"))
+
 
 # %%
-# I --- Load data from CEIC
-if not manual_data:
+# I --- Functions to deal with independent raw data sets
+# Function to convert raw CEIC into wide df, then long df
+def process_ceic_df(df, col_label):
+    """
+    ---Note---
+    For some reason, manually downloaded csv files from CEIC are malformed.
+    If the "Series Remarks" attribute / row is included, they are not properly
+    comma-separated, hence pd.read_csv() won't be able to parse the file correctly.
+    Those rows need to be manually deleted as a txt file (not excel csv, which will
+    distort the raw downloaded timepoints).
+    Where possible, juse use pyceic or the http json api.
+    """
+
+    # deal with the ceic csv mess
+    df.columns = df.iloc[0]  # first row is always "Region"
+    df = df.rename(columns={"Region": "date"})
+    timepoints_pattern = r"^\d{2}/\d{4}$"  # mm/yyyy in str
+    df = df[df["date"].str.match(timepoints_pattern, na=False)]  # keep only timepoints
+    df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
+    del df["date"]
+
+    # convert into long form
+    df = df.melt(id_vars=["quarter"], var_name="country", value_name=col_label)
+    df[col_label] = df[col_label].astype("float")
+    df = df.groupby(["country", "quarter"])[col_label].mean().reset_index(drop=False)
+
+    # format country labels
+    df["country"] = (
+        df["country"].str.replace(r"[^A-Za-z0-9]+", "_", regex=True).str.lower()
+    )
+
+    # reset indices
+    df = df.reset_index(drop=True)
+
+    # output
+    return df
+
+
+def process_ceic_df_global(df, col_label, daily):
+    """
+    ---Note---
+    For some reason, manually downloaded csv files from CEIC are malformed.
+    If the "Series Remarks" attribute / row is included, they are not properly
+    comma-separated, hence pd.read_csv() won't be able to parse the file correctly.
+    Those rows need to be manually deleted as a txt file (not excel csv, which will
+    distort the raw downloaded timepoints).
+    Where possible, juse use pyceic or the http json api.
+    """
+
+    # deal with the ceic csv mess
+    df.columns = ["date", col_label]  # only 2 columns
+    if daily:
+        timepoints_pattern = r"^\d{2}/\d{2}/\d{4}$"  # dd/mm/yyyy in str
+    elif not daily:
+        timepoints_pattern = r"^\d{2}/\d{4}$"  # mm/yyyy in str
+    df = df[df["date"].str.match(timepoints_pattern, na=False)]  # keep only timepoints
+    df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
+    del df["date"]
+
+    # labels
+    df[col_label] = df[col_label].astype("float")
+    df = df.groupby(["quarter"])[col_label].mean().reset_index(drop=False)
+
+    # reset indices
+    df = df.reset_index(drop=True)
+
+    # output
+    return df
+
+
+def process_fred_df(df, col_label):
+    """
+    ---Note---
+    FRED data sets downloaded one by one (for single entity)
+    Treated the same way as global ceic variables
+    """
+
+    # prelims
+    df.columns = ["date", col_label]  # only 2 columns
+    df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
+    del df["date"]
+
+    # labels
+    df[col_label] = df[col_label].astype("float")
+    df = df.groupby(["quarter"])[col_label].mean().reset_index(drop=False)
+
+    # reset indices
+    df = df.reset_index(drop=True)
+
+    # output
+    return df
+
+
+def process_wui(df):
+    """
+    ---Note---
+    WUI data set downloaded directly from official website https://worlduncertaintyindex.com/
+    WUI's own preferred quarterly measure in table T6 is used --- weighted rolling average
+    """
+
+    # dictionary for iso to ceic country names
+    with open(path_data + "wui_manual_download/dict_iso_to_ceic_country_names.txt", "r") as file:
+        file_content = file.read()
+    dict_iso_to_ceic_country_names = ast.literal_eval(file_content)
+    
+    # convert to panel
+    df = df.melt(["year"])
+    df.columns = ["quarter", "country", "wui"]
+
+    # change time format
+    df["quarter"] = pd.to_datetime(df["quarter"]).dt.to_period("Q")
+
+    # change country codes to ceic names in snake cases
+    df["country"] = df["country"].replace(dict_iso_to_ceic_country_names)
+
+    # reset indices
+    df = df.reset_index(drop=True)
+
+    # output 
+    return df
+
+
+# %%
+# II --- Load data from CEIC + process other data sources + merge for processing
+if not manual_data and not use_frozen_processed_data:
     seriesids_all = pd.read_csv(path_ceic + "ceic_macro" + ".csv")
     count_col = 0
     df_debug = pd.DataFrame()
@@ -83,103 +208,25 @@ if not manual_data:
 
     df_debug.to_csv("./documents/ceic_error_series.csv", index=False)
 
-elif manual_data:
+    # Load FRED variables (as if global)
+    for col in ["us_expcpi_hh", "us_jln"]:
+        df_fred = pd.read_csv(path_data + "fred_manual_download/" + col + ".txt")
+        df_fred = process_fred_df(df=df_fred, col_label=col)
+        df_fred = df_fred[["quarter", col]].copy()
+        df = df.merge(df_fred, on="quarter", how="outer")
+    # Load WUI
+    df_wui = pd.read_excel(
+        path_data + "wui_manual_download/WUI_Data.xlsx", sheet_name="T6"
+    )
+    df_wui = process_wui(df=df_wui)
+    df = df.merge(df_wui, on=["country", "quarter"], how="left")
+    # Sort
+    df = df.sort_values(by=["country", "quarter"], ascending=[True, True])
+    # Reset index
+    df = df.reset_index(drop=True)
 
-    # Function to convert raw CEIC into wide df, then long df
-    def process_ceic_df(df, col_label):
-        """
-        ---Note---
-        For some reason, manually downloaded csv files from CEIC are malformed.
-        If the "Series Remarks" attribute / row is included, they are not properly
-        comma-separated, hence pd.read_csv() won't be able to parse the file correctly.
-        Those rows need to be manually deleted as a txt file (not excel csv, which will
-        distort the raw downloaded timepoints).
-        Where possible, juse use pyceic or the http json api.
-        """
 
-        # deal with the ceic csv mess
-        df.columns = df.iloc[0]  # first row is always "Region"
-        df = df.rename(columns={"Region": "date"})
-        timepoints_pattern = r"^\d{2}/\d{4}$"  # mm/yyyy in str
-        df = df[
-            df["date"].str.match(timepoints_pattern, na=False)
-        ]  # keep only timepoints
-        df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
-        del df["date"]
-
-        # convert into long form
-        df = df.melt(id_vars=["quarter"], var_name="country", value_name=col_label)
-        df[col_label] = df[col_label].astype("float")
-        df = (
-            df.groupby(["country", "quarter"])[col_label].mean().reset_index(drop=False)
-        )
-
-        # format country labels
-        df["country"] = (
-            df["country"].str.replace(r"[^A-Za-z0-9]+", "_", regex=True).str.lower()
-        )
-
-        # reset indices
-        df = df.reset_index(drop=True)
-
-        # output
-        return df
-
-    def process_ceic_df_global(df, col_label, daily):
-        """
-        ---Note---
-        For some reason, manually downloaded csv files from CEIC are malformed.
-        If the "Series Remarks" attribute / row is included, they are not properly
-        comma-separated, hence pd.read_csv() won't be able to parse the file correctly.
-        Those rows need to be manually deleted as a txt file (not excel csv, which will
-        distort the raw downloaded timepoints).
-        Where possible, juse use pyceic or the http json api.
-        """
-
-        # deal with the ceic csv mess
-        df.columns = ["date", col_label]  # only 2 columns
-        if daily:
-            timepoints_pattern = r"^\d{2}/\d{2}/\d{4}$"  # dd/mm/yyyy in str
-        elif not daily:
-            timepoints_pattern = r"^\d{2}/\d{4}$"  # mm/yyyy in str
-        df = df[
-            df["date"].str.match(timepoints_pattern, na=False)
-        ]  # keep only timepoints
-        df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
-        del df["date"]
-
-        # labels
-        df[col_label] = df[col_label].astype("float")
-        df = df.groupby(["quarter"])[col_label].mean().reset_index(drop=False)
-
-        # reset indices
-        df = df.reset_index(drop=True)
-
-        # output
-        return df
-
-    def process_fred_df(df, col_label):
-        """
-        ---Note---
-        FRED data sets downloaded one by one (for single entity)
-        Treated the same way as global ceic variables
-        """
-
-        # prelims
-        df.columns = ["date", col_label]  # only 2 columns
-        df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
-        del df["date"]
-
-        # labels
-        df[col_label] = df[col_label].astype("float")
-        df = df.groupby(["quarter"])[col_label].mean().reset_index(drop=False)
-
-        # reset indices
-        df = df.reset_index(drop=True)
-
-        # output
-        return df
-
+elif manual_data and not use_frozen_processed_data:
     # Collect file names (changed into txt files)
     list_filenames = [
         f for f in os.listdir(path_data + "ceic_manual_download/") if f.endswith(".txt")
@@ -213,9 +260,33 @@ elif manual_data:
         df_fred = process_fred_df(df=df_fred, col_label=col)
         df_fred = df_fred[["quarter", col]].copy()
         df = df.merge(df_fred, on="quarter", how="outer")
+    # Load WUI
+    df_wui = pd.read_excel(
+        path_data + "wui_manual_download/WUI_Data.xlsx", sheet_name="T6"
+    )
+    df_wui = process_wui(df=df_wui)
+    df = df.merge(df_wui, on=["country", "quarter"], how="left")
     # Sort
     df = df.sort_values(by=["country", "quarter"], ascending=[True, True])
+    # Reset index
+    df = df.reset_index(drop=True)
 
+elif manual_data and use_frozen_processed_data:
+    df_wui = pd.read_excel(
+        path_data + "wui_manual_download/WUI_Data.xlsx", sheet_name="T6"
+    )
+    df = pd.read_parquet(path_data + "freeze/data_macro_raw.parquet")
+    if "wui" in df.columns:
+        raise NotImplementedError("Check version of frozen data")
+    df_wui = process_wui(df=df_wui)
+    df_wui["quarter"] = df_wui["quarter"].astype("str")
+    df = df.merge(df_wui, on=["country", "quarter"], how="left")
+    # Sort
+    df = df.sort_values(by=["country", "quarter"], ascending=[True, True])
+    # Reset index
+    df = df.reset_index(drop=True)
+else:
+    raise NotImplementedError("Check env arguments for processing raw data")
 
 # %%
 # II --- Export

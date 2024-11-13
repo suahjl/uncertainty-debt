@@ -649,7 +649,7 @@ do_everything_quadrant_interaction_panellp(
 )
 
 # %%
-# IV --- Do everything but exclude country by country
+# IV.2 --- Do everything but exclude country by country
 list_countries_master = [
     "australia",
     "belgium",
@@ -718,7 +718,7 @@ for country_to_exclude in tqdm(base_countries_included):
     )
 
 # %%
-# IV --- Do everything but exclude certain time periods
+# IV.3 --- Do everything but exclude certain time periods
 # Post-GFC
 # With STIR
 do_everything_quadrant_interaction_panellp(
@@ -807,6 +807,49 @@ do_everything_quadrant_interaction_panellp(
     beta_values_to_simulate=debt_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     t_end=date(2019, 12, 31)
+)
+
+# %%
+# V --- Do everything but with WUI as uncertainty shock
+# With STIR
+do_everything_quadrant_interaction_panellp(
+    cols_endog_after_shocks=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    cols_state_dependency=cols_threshold_hh_gov,
+    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="",  # format: "abc_" or ""
+    beta_values_to_simulate=debt_values_combos,
+    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+)
+
+# With M2
+do_everything_quadrant_interaction_panellp(
+    cols_endog_after_shocks=["m2"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminwui"],
+    cols_state_dependency=cols_threshold_hh_gov,
+    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+    countries_drop=[
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
+    file_suffixes="m2_",  # format: "abc_" or ""
+    beta_values_to_simulate=debt_values_combos,
+    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
 )
 
 # %%
