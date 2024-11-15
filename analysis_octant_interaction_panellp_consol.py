@@ -1,5 +1,6 @@
 # %%
 import pandas as pd
+import numpy as np
 from datetime import date, timedelta
 import re
 from helper import telsendmsg, telsendimg, telsendfiles
@@ -15,6 +16,10 @@ from chow_test import chow_test
 import warnings
 import plotly.graph_objects as go
 from itertools import combinations
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.interpolate import griddata
+import itertools
 
 time_start = time.time()
 
@@ -40,6 +45,7 @@ def do_everything_octant_interaction_panellp(
     list_mp_variables: list[str],
     list_uncertainty_variables: list[str],
     cols_state_dependency: list[str],
+    grid_state_dependency_ranges: list[list[float]],
     state_dependency_nice_for_title: str,  # HH debt, Gov debt
     countries_drop: list[str],
     file_suffixes: str,  # format: "abc_" or ""
@@ -79,7 +85,7 @@ def do_everything_octant_interaction_panellp(
         result.extend(
             "_".join(triplet) for triplet in combinations(labels_to_be_interacted, 3)
         )
-        
+
         # Add quartet combinations
         result.extend(
             "_".join(quartet) for quartet in combinations(labels_to_be_interacted, 4)
@@ -105,6 +111,84 @@ def do_everything_octant_interaction_panellp(
 
         # C --- Output
         return df, result
+
+    def compute_grid_octant_average_effects(
+        input: pd.DataFrame,
+        response_variable: str,  # which IRF?
+        xyz_labels: list[str],  # [x, y, z]
+        xyz_ranges: list[list[float]],  # for v2, v3, v4
+        shock_size: float,  # size of shock of interest (v1)
+        grid_size: int,
+        int1_label: str,
+        int12_label: str,
+        int13_label: str,
+        int14_label: str,
+        int123_label: str,
+        int124_label: str,
+        int134_label: str,
+        int1234_label: str,
+        n_periods_to_average_over: int,
+    ):
+        # prelims
+        irf = input.copy()  # must be output from LP modules
+        # generate average irf
+        irf = irf[irf["Horizon"] < n_periods_to_average_over]  # e.g., 4 ==> 0,1,2,3
+        irf = (
+            irf.groupby(["Shock", "Response"])[["Mean"]].mean().reset_index(drop=False)
+        )
+        # create grid of values of x, y and z
+        x_values = np.linspace(xyz_ranges[0][0], xyz_ranges[0][1], grid_size)
+        y_values = np.linspace(xyz_ranges[1][0], xyz_ranges[1][1], grid_size)
+        z_values = np.linspace(xyz_ranges[2][0], xyz_ranges[2][1], grid_size)
+        grid = itertools.product(x_values, y_values, z_values)
+        grid = pd.DataFrame(grid, columns=[xyz_labels[0], xyz_labels[1], xyz_labels[2]])
+
+        # Extract betas
+        b1 = irf.loc[
+            ((irf["Shock"] == int1_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b12 = irf.loc[
+            ((irf["Shock"] == int12_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b13 = irf.loc[
+            ((irf["Shock"] == int13_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b14 = irf.loc[
+            ((irf["Shock"] == int14_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b123 = irf.loc[
+            ((irf["Shock"] == int123_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b124 = irf.loc[
+            ((irf["Shock"] == int124_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b134 = irf.loc[
+            ((irf["Shock"] == int134_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        b1234 = irf.loc[
+            ((irf["Shock"] == int1234_label) & (irf["Response"] == response_variable)),
+            "Mean",
+        ].reset_index(drop=True)[0]
+        # Fill grid
+        grid["impact"] = (
+            (b1 * shock_size)
+            + (b12 * grid[xyz_labels[0]])
+            + (b13 * grid[xyz_labels[1]])
+            + (b14 * grid[xyz_labels[2]])
+            + (b123 * grid[xyz_labels[0]] * grid[xyz_labels[1]])
+            + (b124 * grid[xyz_labels[0]] * grid[xyz_labels[2]])
+            + (b134 * grid[xyz_labels[1]] * grid[xyz_labels[2]])
+            + (b1234 * grid[xyz_labels[0]] * grid[xyz_labels[1]] * grid[xyz_labels[2]])
+        )
+        # Output
+        return grid
 
     def irf_interaction_only_wide(
         irf: pd.DataFrame,
@@ -509,6 +593,60 @@ def do_everything_octant_interaction_panellp(
                 ci_width=0.8,
             )  # actual model is estimated only once
             for shock in [uncertainty_variable, mp_variable]:
+                for response in cols_all_endog:
+                    # Compile 1Y and 2Y average marginal effects
+                    grid = compute_grid_octant_average_effects(
+                        input=irf,
+                        response_variable=shock,
+                        xyz_labels=cols_state_dependency,
+                        xyz_ranges=grid_state_dependency_ranges,
+                        grid_size=100,
+                        shock_size=1,
+                        int1_label=shock,
+                        int12_label=shock + "_" + cols_state_dependency[0],
+                        int13_label=shock + "_" + cols_state_dependency[1],
+                        int14_label=shock + "_" + cols_state_dependency[2],
+                        int123_label=shock
+                        + "_"
+                        + cols_state_dependency[0]
+                        + "_"
+                        + cols_state_dependency[1],
+                        int124_label=shock
+                        + "_"
+                        + cols_state_dependency[0]
+                        + "_"
+                        + cols_state_dependency[2],
+                        int134_label=shock
+                        + "_"
+                        + cols_state_dependency[1]
+                        + "_"
+                        + cols_state_dependency[2],
+                        int1234_label=shock
+                        + "_"
+                        + cols_state_dependency[0]
+                        + "_"
+                        + cols_state_dependency[1]
+                        + "_"
+                        + cols_state_dependency[2],
+                        n_periods_to_average_over=4,
+                    )
+                    grid.to_parquet(
+                        path_output
+                        + "octant_interaction_panellp_grid_impactsize_"
+                        + file_suffixes
+                        + "irf_"
+                        + "modwith_"
+                        + uncertainty_variable
+                        + "_"
+                        + mp_variable
+                        + "_"
+                        + "shock"
+                        + shock
+                        + "_"
+                        + "response"
+                        + response
+                        + ".parquet"
+                    )  # save grids for possible separate processing
                 irf_interaction = irf_interaction_only_wide(
                     irf=irf,
                     int1_label=shock,
@@ -549,9 +687,15 @@ def do_everything_octant_interaction_panellp(
                         beta_int_colours=irf_colours_for_each_beta,  # ["blue", "red"]
                         interacted_variable_label_nice=state_dependency_nice_for_title,
                     )  # IRF plots are generated for all variables per shock
-    # Return dataframe for reference
-    return df, irf, irf_interaction
 
+
+"""
+Comment on 2024-11-14
+- Octant grid function needs serious work
+    > Contour map idea is to iterate through 1k values of hh and gov debt, then plot 2 contour maps of the IRF response to MP / uncertainty shocks for high & low unc
+    > Heatmap idea is to use cubes (xyz, then have various slices horizontally and vertically with different heat intensity)
+    > For every value of x, we need to cover all values of y and z too. 
+"""
 
 # %%
 # II --- Some objects for quick ref later
@@ -572,6 +716,7 @@ cols_endog_short = [
     "reer",
 ]
 cols_threshold_hh_gov_epu = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "epu_ref"]
+grid_range_hh_gov_epu = [[0, 150], [0, 250], [0, 500]]
 debt_values_combos = [
     [30, 60, 80],  # HH low, gov low, uncertainty low
     # [60, 60, 80],  # HH med, gov low, uncertainty low
@@ -617,12 +762,13 @@ debt_values_combos_irf_line_colours = [
 # %%
 # III --- Do everything
 # With STIR
-df, irf, irf_interaction = do_everything_octant_interaction_panellp(
+do_everything_octant_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
     cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
     state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2016 Q3

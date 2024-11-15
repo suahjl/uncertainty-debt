@@ -54,7 +54,6 @@ ax.set_zlabel("AICc")
 # Save the plot as a PNG file
 plt.savefig(path_output + "thresholdselection_aicc_contour.png", dpi=300)
 
-
 # %%
 # X --- Notify
 # End

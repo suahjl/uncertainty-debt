@@ -1555,3 +1555,17 @@ def subplots_scatterplots(
     )
     # output
     return fig
+
+
+def plot_contour_xyz(x_grid, y_grid, z_grid, x_label, y_label, z_label, save_output_to, cmap="viridis", dpi=300):
+    # Plot the contour map and save to PNG
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    ax.contour3D(x_grid, y_grid, z_grid, 50, cmap=cmap)
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_zlabel(z_label)
+
+    # Save the plot as a PNG file
+    plt.savefig(save_output_to, dpi=300)
