@@ -84,7 +84,7 @@ def do_everything(
                             zi,
                             levels=150,
                             cmap="viridis",
-                            alpha=0.25 + plane_count * 0.1,
+                            alpha=0.2 + plane_count * 0.1,
                         )
                         # Next
                         plane_count += 1
@@ -92,7 +92,17 @@ def do_everything(
                     ax.set_xlabel(xyz_labels[0])
                     ax.set_ylabel(xyz_labels[1])
                     ax.set_zlabel(xyz_labels[2])
-                    plt.title("Impact of " + shock + " on " + response + "\nFor " + xyz_labels[2] + ": [" + ",".join([str(i) for i in z_quantiles_to_fix]) + "]")
+                    plt.title(
+                        "Impact of "
+                        + shock
+                        + " on "
+                        + response
+                        + "\nFor "
+                        + xyz_labels[2]
+                        + ": ["
+                        + ",".join([str(i) for i in z_quantiles_to_fix])
+                        + "]"
+                    )
                     # Save the plot as a PNG file
                     plt.savefig(
                         path_output
@@ -112,6 +122,8 @@ def do_everything(
                         + ".png",
                         dpi=300,
                     )
+                    # Close to save memory
+                    plt.close()
 
 
 # %%
@@ -134,8 +146,13 @@ cols_endog_short = [
 ]
 cols_endog_essential = ["gdp", "corecpi"]
 cols_threshold_hh_gov_epu = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "epu_ref"]
+cols_threshold_hh_gov_wui = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "wui_ref"]
 epu_quantiles_to_fix = [0, 0.2, 0.4, 0.6, 0.8, 1]  # 0, 100, 200, 300, 400, 500
+wui_quantiles_to_fix = [0, 0.2, 0.4, 0.6, 0.8, 1]  # normalised as 0 to 1
 
+# %%
+# III --- Do everything with EPU as uncertainty shock
+# STIR
 do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
@@ -144,6 +161,76 @@ do_everything(
     z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="",
 )
+# STIR (reduced)
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
+    file_suffixes="reduced_",
+)
+# M2
+do_everything(
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminepu"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
+    file_suffixes="m2_",
+)
+# M2 (reduced)
+do_everything(
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminepu"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
+    file_suffixes="m2_reduced_",
+)
+
+# %%
+# III.B --- Do everything with WUI as uncertainty shock
+# STIR
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
+    file_suffixes="",
+)
+
+# STIR (reduced)
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
+    file_suffixes="reduced_",
+)
+
+# M2
+do_everything(
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminwui"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
+    file_suffixes="m2_",
+)
+
+# M2 (reduced)
+do_everything(
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminwui"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
+    file_suffixes="m2_reduced_",
+)
+
 
 # %%
 # X --- Notify
