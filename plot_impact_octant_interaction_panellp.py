@@ -231,6 +231,50 @@ do_everything(
     file_suffixes="m2_reduced_",
 )
 
+# %%
+# III.C --- Do everything but with +8Q as reference for maxminshocks
+# EPU and STIR
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
+    file_suffixes="maxminref8_",
+)
+
+# WUI and STIR
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
+    file_suffixes="maxminref8_",
+)
+
+
+# %%
+# III.D --- Do everything but with +6Q as reference for maxminshocks
+# EPU and STIR
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
+    file_suffixes="maxminref6_",
+)
+
+# WUI and STIR
+do_everything(
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    responses_to_plot=cols_endog_essential,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
+    file_suffixes="maxminref6_",
+)
 
 # %%
 # X --- Notify

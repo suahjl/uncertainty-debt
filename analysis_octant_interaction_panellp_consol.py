@@ -775,7 +775,6 @@ debt_values_combos_irf_line_colours = [
 
 # %%
 # III --- Do everything
-
 # With STIR
 do_everything_octant_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
@@ -970,6 +969,115 @@ do_everything_octant_interaction_panellp(
     beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy",
+)
+
+# %%
+# III.C --- Do everything but with +8Q as reference for maxminshocks
+# EPU and STIR
+do_everything_octant_interaction_panellp(
+    cols_endog_after_shocks=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="maxminref8_",  # format: "abc_" or ""
+    beta_values_to_simulate=hh_gov_epu_values_combos,
+    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    input_df_suffix="yoy_maxminref8",
+)
+
+# WUI and STIR
+do_everything_octant_interaction_panellp(
+    cols_endog_after_shocks=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
+    countries_drop=[
+        "argentina",
+        "china",
+        "germany",
+        "india",
+        "indonesia",
+        "israel",
+        "malaysia",
+        "turkey",
+        "thailand",
+        "denmark",
+        "norway",
+        "sweden",
+    ],
+    file_suffixes="maxminref8_",  # format: "abc_" or ""
+    beta_values_to_simulate=hh_gov_wui_values_combos,
+    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    input_df_suffix="large_yoy_maxminref8",
+)
+
+
+# %%
+# III.D --- Do everything but with +6Q as reference for maxminshocks
+# EPU and STIR
+do_everything_octant_interaction_panellp(
+    cols_endog_after_shocks=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="maxminref6_",  # format: "abc_" or ""
+    beta_values_to_simulate=hh_gov_epu_values_combos,
+    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    input_df_suffix="yoy_maxminref6",
+)
+
+# WUI and STIR
+do_everything_octant_interaction_panellp(
+    cols_endog_after_shocks=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminwui"],
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
+    countries_drop=[
+        "argentina",
+        "china",
+        "germany",
+        "india",
+        "indonesia",
+        "israel",
+        "malaysia",
+        "turkey",
+        "thailand",
+        "denmark",
+        "norway",
+        "sweden",
+    ],
+    file_suffixes="maxminref6_",  # format: "abc_" or ""
+    beta_values_to_simulate=hh_gov_wui_values_combos,
+    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    input_df_suffix="large_yoy_maxminref6",
 )
 
 
