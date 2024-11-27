@@ -31,10 +31,13 @@ import descriptive_scatter_ratesinlevels
 import analysis_reg_quadrant_thresholdselection_consol
 
 # %%
-import analysis_reg_quadrant_thresholdselection_consol
+import analysis_quadrant_panelthresholdlp_consol
 
 # %%
 import analysis_quadrant_interaction_panellp_consol
+
+# %%
+import analysis_octant_interaction_panellp_consol
 
 # %%
 import descriptive_scatter_regime

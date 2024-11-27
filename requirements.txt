@@ -17,5 +17,6 @@ multiprocess
 requests
 ipykernel
 localprojections
-ruptures
-chowtest
+scikit-learn
+pypdf
+reportlab

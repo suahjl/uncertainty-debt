@@ -615,6 +615,24 @@ def pil_img2pdf(list_images: list, extension: str, pdf_name: str):
     )
 
 
+def pil_img2pdf_manualextension(list_images: list, pdf_name: str):
+    seq = list_images.copy()  # deep copy
+    list_img = []
+    file_pdf = pdf_name + ".pdf"
+    run = 0
+    for i in seq:
+        img = Image.open(i)
+        img = img.convert("RGB")  # PIL cannot save RGBA files as pdf
+        if run == 0:
+            first_img = img.copy()
+        elif run > 0:
+            list_img = list_img + [img]
+        run += 1
+    first_img.save(
+        file_pdf, "PDF", resolution=100.0, save_all=True, append_images=list_img
+    )
+
+
 def boxplot(
     data: pd.DataFrame,
     y_cols: list,
@@ -717,7 +735,7 @@ def lineplot(
     line_dashes: list[str],
     main_title: str,
     font_size: int = 24,
-    show_legend: bool = True
+    show_legend: bool = True,
 ):
     # prelims
     df = data.copy()
@@ -1150,7 +1168,7 @@ def stacked_area_lineplot(
                 fillcolor=colour_area,
                 line=dict(width=0.5, color=colour_area),
                 stackgroup="one",
-                fill='tonexty'
+                fill="tonexty",
             )
         )
     # plot lines
@@ -1557,7 +1575,17 @@ def subplots_scatterplots(
     return fig
 
 
-def plot_contour_xyz(x_grid, y_grid, z_grid, x_label, y_label, z_label, save_output_to, cmap="viridis", dpi=300):
+def plot_contour_xyz(
+    x_grid,
+    y_grid,
+    z_grid,
+    x_label,
+    y_label,
+    z_label,
+    save_output_to,
+    cmap="viridis",
+    dpi=300,
+):
     # Plot the contour map and save to PNG
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")

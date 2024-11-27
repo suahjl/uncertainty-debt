@@ -1,5 +1,5 @@
 # %%
-# Compiles only files and place them in the ./output/for_paper/ directory (not gitignored)
+# Compiles only some files and place them in the ./output/charts_for_papers/ directory (not gitignored)
 
 # %%
 import re
@@ -32,6 +32,18 @@ def copy_files(input_path, input_file_names, output_path):
             print(f"Copied {input_path + input_file_name} to {output_path}")
         else:
             print(f"File not found: {input_path + input_file_name}")
+
+
+def clear_directory(directory_to_clear):
+    for filename in os.listdir(directory_to_clear):
+        file_path = os.path.join(directory_to_clear, filename)
+        if os.path.isfile(file_path):  # Check if it's a file
+            os.remove(file_path)
+
+
+def compile_filenames_regex(pattern, file_path):
+    file_list = [file for file in os.listdir(file_path) if re.match(pattern, file)]
+    return file_list
 
 
 # %%
@@ -248,6 +260,7 @@ selected_file_names = [
     "quadrant_thresholdlp_us_jln_irf_modwith_maxminus_jln_maxminstir_shockmaxminstir_responsecorecpi",
 ]
 selected_file_names = [i + ".png" for i in selected_file_names]
+clear_directory(directory_to_clear=path_for_paper)
 copy_files(
     input_path=path_output,
     input_file_names=selected_file_names,
