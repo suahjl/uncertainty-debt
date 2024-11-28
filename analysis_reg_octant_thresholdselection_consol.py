@@ -609,7 +609,7 @@ def do_everything_octant_thresholdsearch_fe(
                         + int(1),
                     ],
                 ],
-                threshold_range_skip=[5, 1, 1],
+                threshold_range_skip=[5, 5, 5],
                 entity_col="country",
                 time_col="time",
             )
@@ -716,8 +716,8 @@ cols_endog_short = [
     "corecpi",  # corecpi cpi
     "reer",
 ]
-cols_threshold_epu_hh_gov_ref = ["epu_ref", "hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
-cols_threshold_epu_hh_gov = ["epu_ref", "hhdebt_ngdp", "govdebt_ngdp"]
+cols_threshold_corp_hh_gov_ref = ["corpdebt_ngdp_ref", "hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
+cols_threshold_corp_hh_gov = ["corpdebt_ngdp", "hhdebt_ngdp", "govdebt_ngdp"]
 
 # STIR
 do_everything_octant_thresholdsearch_fe(
@@ -725,8 +725,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -737,14 +737,15 @@ do_everything_octant_thresholdsearch_fe(
     ],
     file_suffixes="",  # format: "abc_" or ""
 )
+
 # STIR (reduced)
 do_everything_octant_thresholdsearch_fe(
     cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -762,8 +763,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -779,8 +780,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -797,8 +798,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -815,8 +816,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -834,8 +835,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -852,8 +853,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -871,8 +872,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -888,8 +889,8 @@ do_everything_octant_thresholdsearch_fe(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    cols_threshold=cols_threshold_corp_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_corp_hh_gov,  # the ones without _ref
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -910,10 +911,7 @@ print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds 
 
 """
 2024-11-28 notes:
-- Grid search over 3 variables even at 5ppt, 1ppt, 1ppt intervals will take several hours with a 2022 i5 machine.
-- Need to consider writing a more efficient optimisation approach
-- Latin hypercube sampling is possible 
-- Only the main STIR analysis is completed
+- Changed grid search to 5ppt intervals for corp, hh and gov debt 
 """
 
 

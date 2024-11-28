@@ -36,7 +36,7 @@ def do_everything(
                 for response in responses_to_plot:
                     grid_full = pd.read_parquet(
                         path_output
-                        + "octant_interaction_panellp_grid_impactsize_"
+                        + "octant_uncertainty_interaction_panellp_grid_impactsize_"
                         + file_suffixes
                         + "irf_"
                         + "modwith_"
@@ -106,7 +106,7 @@ def do_everything(
                     # Save the plot as a PNG file
                     plt.savefig(
                         path_output
-                        + "octant_interaction_panellp_grid_impactsize_contour_"
+                        + "octant_uncertainty_interaction_panellp_grid_impactsize_contour_"
                         + file_suffixes
                         + "irf_"
                         + "modwith_"
@@ -145,8 +145,10 @@ cols_endog_short = [
     "reer",
 ]
 cols_endog_essential = ["gdp", "corecpi"]
-cols_threshold_hh_gov_corp = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "corpdebt_ngdp_ref"]
-corpdebt_quantiles_to_fix = [0, 0.2, 0.4, 0.6, 0.8, 1] 
+cols_threshold_hh_gov_epu = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "epu_ref"]
+cols_threshold_hh_gov_wui = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "wui_ref"]
+epu_quantiles_to_fix = [0, 0.2, 0.4, 0.6, 0.8, 1]  # 0, 100, 200, 300, 400, 500
+wui_quantiles_to_fix = [0, 0.2, 0.4, 0.6, 0.8, 1]  # normalised as 0 to 1
 
 # %%
 # III --- Do everything with EPU as uncertainty shock
@@ -155,8 +157,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="",
 )
 # STIR (reduced)
@@ -164,8 +166,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="reduced_",
 )
 # M2
@@ -173,8 +175,8 @@ do_everything(
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="m2_",
 )
 # M2 (reduced)
@@ -182,8 +184,8 @@ do_everything(
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="m2_reduced_",
 )
 
@@ -194,8 +196,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
     file_suffixes="",
 )
 
@@ -204,8 +206,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
     file_suffixes="reduced_",
 )
 
@@ -214,8 +216,8 @@ do_everything(
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminwui"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
     file_suffixes="m2_",
 )
 
@@ -224,8 +226,8 @@ do_everything(
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminwui"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
     file_suffixes="m2_reduced_",
 )
 
@@ -236,8 +238,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="maxminref8_",
 )
 
@@ -246,8 +248,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
     file_suffixes="maxminref8_",
 )
 
@@ -259,8 +261,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_epu,
+    z_quantiles_to_fix=epu_quantiles_to_fix,
     file_suffixes="maxminref6_",
 )
 
@@ -269,8 +271,8 @@ do_everything(
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
     responses_to_plot=cols_endog_essential,
-    xyz_labels=cols_threshold_hh_gov_corp,
-    z_quantiles_to_fix=corpdebt_quantiles_to_fix,
+    xyz_labels=cols_threshold_hh_gov_wui,
+    z_quantiles_to_fix=wui_quantiles_to_fix,
     file_suffixes="maxminref6_",
 )
 

@@ -89,20 +89,12 @@ def watermark_pdf(input_pdf, output_pdf, watermarks):
 # %%
 # II --- Compile selected files (can instead softcode, but hardcoding makes it easier to define specific set)
 list_regex = [
-    "^octant_interaction_panellp_[\w]+_modwith_[\w]+_shock[\w]+_responsecorecpi.png",
-    "^octant_interaction_panellp_[\w]+_modwith_[\w]+_shock[\w]+_responsegdp.png",
-    "^quadrant_interaction_panellp_[\w]+_modwith_[\w]+_shock[\w]+_responsecorecpi.png",
-    "^quadrant_interaction_panellp_[\w]+_modwith_[\w]+_shock[\w]+_responsegdp.png",
-    "^quadrant_panelthresholdlp_[\w]+_modwith_[\w]+_shock[\w]+_responsecorecpi.png",
-    "^quadrant_panelthresholdlp_[\w]+_modwith_[\w]+_shock[\w]+_responsegdp.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminwui_response[\w]+.png",
 ]
 list_pdfnames = [
-    "octant_interaction_panellp_responsecorecpi",
-    "octant_interaction_panellp_responsegdp",
-    "quadrant_interaction_panellp_responsecorecpi",
-    "quadrant_interaction_panellp_responsegdp",
-    "quadrant_panelthresholdlp_responsecorecpi",
-    "quadrant_panelthresholdlp_responsegdp",
+    "quadrant_privdebt_panelthresholdlp_shockmaxminepu",
+    "quadrant_privdebt_panelthresholdlp_shockmaxminwui",
 ]
 clear_directory(directory_to_clear=path_for_chartpack)
 for regex, pdfname in zip(list_regex, list_pdfnames):

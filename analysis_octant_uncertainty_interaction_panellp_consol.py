@@ -504,7 +504,7 @@ def do_everything_octant_interaction_panellp(
             file_ci_suffix = ""
         fig.write_image(
             path_output
-            + "octant_interaction_panellp_"
+            + "octant_uncertainty_interaction_panellp_"
             + file_suffixes
             + "irf_"
             + "modwith_"
@@ -630,7 +630,7 @@ def do_everything_octant_interaction_panellp(
                     )
                     grid.to_parquet(
                         path_output
-                        + "octant_interaction_panellp_grid_impactsize_"
+                        + "octant_uncertainty_interaction_panellp_grid_impactsize_"
                         + file_suffixes
                         + "irf_"
                         + "modwith_"
@@ -705,17 +705,49 @@ cols_endog_short = [
     "corecpi",  # corecpi cpi
     "reer",
 ]
-cols_threshold_hh_gov_corp = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "corpdebt_ngdp_ref"]
-grid_range_hh_gov_corp = [[0, 150], [0, 250], [0, 300]]
-hh_gov_corp_values_combos = [
-    [30, 60, 50],  # HH low, gov low, corp low
-    [90, 60, 50],  # HH high, gov low, corp low
-    [30, 120, 50],  # HH low, gov high, corp low
-    [90, 120, 50],  # HH high, gov high, corp low
-    [30, 60, 150],  # HH low, gov low, corp high
-    [90, 60, 150],  # HH high, gov low, corp high
-    [30, 120, 150],  # HH low, gov high, corp high
-    [90, 120, 150],  # HH high, gov high, corp high
+cols_threshold_hh_gov_epu = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "epu_ref"]
+cols_threshold_hh_gov_wui = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref", "wui_ref"]
+grid_range_hh_gov_epu = [[0, 150], [0, 250], [0, 500]]
+grid_range_hh_gov_wui = [[0, 150], [0, 250], [0, 1]]
+hh_gov_epu_values_combos = [
+    [30, 60, 80],  # HH low, gov low, uncertainty low
+    # [60, 60, 80],  # HH med, gov low, uncertainty low
+    [90, 60, 80],  # HH high, gov low, uncertainty low
+    # [30, 90, 80],  # HH low, gov med, uncertainty low
+    # [60, 90, 80],  # HH med, gov med, uncertainty low
+    # [90, 90, 80],  # HH high, gov med, uncertainty low
+    [30, 120, 80],  # HH low, gov high, uncertainty low
+    # [60, 120, 80],  # HH med, gov high, uncertainty low
+    [90, 120, 80],  # HH high, gov high, uncertainty low
+    [30, 60, 160],  # HH low, gov low, uncertainty high
+    # [60, 60, 160],  # HH med, gov low, uncertainty high
+    [90, 60, 160],  # HH high, gov low, uncertainty high
+    # [30, 90, 160],  # HH low, gov med, uncertainty high
+    # [60, 90, 160],  # HH med, gov med, uncertainty high
+    # [90, 90, 160],  # HH high, gov med, uncertainty high
+    [30, 120, 160],  # HH low, gov high, uncertainty high
+    # [60, 120, 160],  # HH med, gov high, uncertainty high
+    [90, 120, 160],  # HH high, gov high, uncertainty high
+]
+hh_gov_wui_values_combos = [
+    [30, 60, 0.2],  # HH low, gov low, uncertainty low
+    # [60, 60, 0.2],  # HH med, gov low, uncertainty low
+    [90, 60, 0.2],  # HH high, gov low, uncertainty low
+    # [30, 90, 0.2],  # HH low, gov med, uncertainty low
+    # [60, 90, 0.2],  # HH med, gov med, uncertainty low
+    # [90, 90, 0.2],  # HH high, gov med, uncertainty low
+    [30, 120, 0.2],  # HH low, gov high, uncertainty low
+    # [60, 120, 0.2],  # HH med, gov high, uncertainty low
+    [90, 120, 0.2],  # HH high, gov high, uncertainty low
+    [30, 60, 0.4],  # HH low, gov low, uncertainty high
+    # [60, 60, 0.4],  # HH med, gov low, uncertainty high
+    [90, 60, 0.4],  # HH high, gov low, uncertainty high
+    # [30, 90, 0.4],  # HH low, gov med, uncertainty high
+    # [60, 90, 0.4],  # HH med, gov med, uncertainty high
+    # [90, 90, 0.4],  # HH high, gov med, uncertainty high
+    [30, 120, 0.4],  # HH low, gov high, uncertainty high
+    # [60, 120, 0.4],  # HH med, gov high, uncertainty high
+    [90, 120, 0.4],  # HH high, gov high, uncertainty high
 ]
 # debt_values_combos_irf_line_colours=[
 #     "lightblue",
@@ -747,9 +779,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, EPU
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -759,7 +791,7 @@ do_everything_octant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_epu_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
 )
 
@@ -769,9 +801,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, EPU
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -781,7 +813,7 @@ do_everything_octant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_epu_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
 )
 
@@ -791,9 +823,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, EPU
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -802,7 +834,7 @@ do_everything_octant_interaction_panellp(
         "singapore",  # 2005 Q1
     ],
     file_suffixes="m2_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_epu_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
 )
 
@@ -812,9 +844,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, EPU
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -823,7 +855,7 @@ do_everything_octant_interaction_panellp(
         "singapore",  # 2005 Q1
     ],
     file_suffixes="m2_reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_epu_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
 )
 
@@ -835,9 +867,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, WUI
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
     countries_drop=[
         "argentina",
         "china",
@@ -853,7 +885,7 @@ do_everything_octant_interaction_panellp(
         "sweden",
     ],
     file_suffixes="",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy",
 )
@@ -864,9 +896,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, WUI
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
     countries_drop=[
         "argentina",
         "china",
@@ -882,7 +914,7 @@ do_everything_octant_interaction_panellp(
         "sweden",
     ],
     file_suffixes="reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy",
 )
@@ -893,9 +925,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, WUI
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
     countries_drop=[
         "argentina",
         "chile",
@@ -907,7 +939,7 @@ do_everything_octant_interaction_panellp(
         "turkey",
     ],
     file_suffixes="m2_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy",
 )
@@ -918,9 +950,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, WUI
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
     countries_drop=[
         "argentina",
         "chile",
@@ -932,7 +964,7 @@ do_everything_octant_interaction_panellp(
         "turkey",
     ],
     file_suffixes="m2_reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy",
 )
@@ -945,9 +977,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, EPU
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -957,7 +989,7 @@ do_everything_octant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="maxminref8_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_epu_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="yoy_maxminref8",
 )
@@ -968,9 +1000,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, WUI
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
     countries_drop=[
         "argentina",
         "china",
@@ -986,7 +1018,7 @@ do_everything_octant_interaction_panellp(
         "sweden",
     ],
     file_suffixes="maxminref8_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy_maxminref8",
 )
@@ -1000,9 +1032,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, EPU
+    cols_state_dependency=cols_threshold_hh_gov_epu,
+    grid_state_dependency_ranges=grid_range_hh_gov_epu,
+    state_dependency_nice_for_title="HH debt, Gov debt, EPU",  # HH debt, Gov debt, EPU
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -1012,7 +1044,7 @@ do_everything_octant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="maxminref6_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_epu_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="yoy_maxminref6",
 )
@@ -1023,9 +1055,9 @@ do_everything_octant_interaction_panellp(
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov_corp,
-    grid_state_dependency_ranges=grid_range_hh_gov_corp,
-    state_dependency_nice_for_title="HH debt, Gov debt, Corp debt",  # HH debt, Gov debt, WUI
+    cols_state_dependency=cols_threshold_hh_gov_wui,
+    grid_state_dependency_ranges=grid_range_hh_gov_wui,
+    state_dependency_nice_for_title="HH debt, Gov debt, WUI",  # HH debt, Gov debt, WUI
     countries_drop=[
         "argentina",
         "china",
@@ -1041,7 +1073,7 @@ do_everything_octant_interaction_panellp(
         "sweden",
     ],
     file_suffixes="maxminref6_",  # format: "abc_" or ""
-    beta_values_to_simulate=hh_gov_corp_values_combos,
+    beta_values_to_simulate=hh_gov_wui_values_combos,
     irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
     input_df_suffix="large_yoy_maxminref6",
 )

@@ -397,7 +397,7 @@ def fe_reg(
         eqn = y_col + "~" + "+".join(x_cols) + "+EntityEffects+TimeEffects"
 
     # Estimate model
-    mod = PanelOLS.from_formula(formula=eqn, data=d)
+    mod = PanelOLS.from_formula(formula=eqn, data=d, drop_absorbed=True)
     res = mod.fit(cov_type=cov_choice)
     print(res.summary)
 
