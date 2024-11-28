@@ -11,8 +11,6 @@ import os
 from dotenv import load_dotenv
 import ast
 from tabulate import tabulate
-import ruptures as rpt
-from chow_test import chow_test
 import warnings
 
 time_start = time.time()

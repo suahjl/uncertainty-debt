@@ -32,7 +32,7 @@ warnings.filterwarnings(
 
 # %%
 # I --- Do everything function
-def do_everything_quadrant_interaction_panellp(
+def do_everything_single_interaction_panellp(
     cols_endog_after_shocks: list[str],
     cols_all_exog: list[str],
     list_mp_variables: list[str],
@@ -41,7 +41,7 @@ def do_everything_quadrant_interaction_panellp(
     state_dependency_nice_for_title: str,  # HH debt, Gov debt
     countries_drop: list[str],
     file_suffixes: str,  # format: "abc_" or ""
-    beta_values_to_simulate: list[list[float]],
+    beta_values_to_simulate: list[float],  # [80, 160]
     irf_colours_for_each_beta: list[str],
     t_start: date = date(1990, 1, 1),
     t_end: date = None,
@@ -73,10 +73,6 @@ def do_everything_quadrant_interaction_panellp(
         result.extend(
             "_".join(pair) for pair in combinations(labels_to_be_interacted, 2)
         )
-        # Add triplet combinations
-        result.extend(
-            "_".join(triplet) for triplet in combinations(labels_to_be_interacted, 3)
-        )
 
         # B --- Create new columns in df
         # Loop over pairs
@@ -84,27 +80,19 @@ def do_everything_quadrant_interaction_panellp(
             col_name = "_".join(pair)
             df[col_name] = df[pair[0]] * df[pair[1]]
 
-        # Loop over triples
-        for triple in combinations(labels_to_be_interacted, 3):
-            col_name = "_".join(triple)
-            df[col_name] = df[triple[0]] * df[triple[1]] * df[triple[2]]
         # C --- Output
         return df, result
 
     def irf_interaction_only_wide(
         irf: pd.DataFrame,
         b1_label: str,  # the shock of interest
-        b4_label: str,
-        b5_label: str,
-        b7_label: str,
-        beta_ints: list[list[float]],
+        b3_label: str,
+        beta_ints: list[float],
     ):
-        # Triple interacted model: y = a + b1A + b2B + b3C + b4AB + b5AC + b6BC + b7ABC
+        # Standard interaction model: y = a + b1A + b2B + b3AB
         # subset b1 and b3
         irf_b1 = irf[irf["Shock"] == b1_label].copy()
-        irf_b4 = irf[irf["Shock"] == b4_label].copy()
-        irf_b5 = irf[irf["Shock"] == b5_label].copy()
-        irf_b7 = irf[irf["Shock"] == b7_label].copy()
+        irf_b3 = irf[irf["Shock"] == b3_label].copy()
         # rename all column labels for Mean, LB and UB for easy merging later
         irf_b1 = irf_b1.rename(
             columns={
@@ -113,82 +101,42 @@ def do_everything_quadrant_interaction_panellp(
                 "UB": "UB_" + b1_label,
             }
         )
-        irf_b4 = irf_b4.rename(
+        irf_b3 = irf_b3.rename(
             columns={
-                "Mean": "Mean_" + b4_label,
-                "LB": "LB_" + b4_label,
-                "UB": "UB_" + b4_label,
+                "Mean": "Mean_" + b3_label,
+                "LB": "LB_" + b3_label,
+                "UB": "UB_" + b3_label,
             }
         )
-        irf_b5 = irf_b5.rename(
-            columns={
-                "Mean": "Mean_" + b5_label,
-                "LB": "LB_" + b5_label,
-                "UB": "UB_" + b5_label,
-            }
-        )
-        irf_b7 = irf_b7.rename(
-            columns={
-                "Mean": "Mean_" + b7_label,
-                "LB": "LB_" + b7_label,
-                "UB": "UB_" + b7_label,
-            }
-        )
-        del irf_b4["Shock"]
-        del irf_b5["Shock"]
-        del irf_b7["Shock"]
+        del irf_b3["Shock"]
         # merge left
-        irf_interactions = irf_b1.merge(irf_b4, on=["Response", "Horizon"])
-        irf_interactions = irf_interactions.merge(irf_b5, on=["Response", "Horizon"])
-        irf_interactions = irf_interactions.merge(irf_b7, on=["Response", "Horizon"])
-        irf_interactions["Shock"] = (
-            b1_label + "_mult_" + b4_label + "_mult_" + b5_label + "_mult_" + b7_label
-        )
+        irf_interactions = irf_b1.merge(irf_b3, on=["Response", "Horizon"])
+        irf_interactions["Shock"] = b1_label + "_mult_" + b3_label
         # generate new irfs
         for beta_int in beta_ints:
             for irf_moment in ["Mean", "LB", "UB"]:
-                irf_interactions[
-                    irf_moment
-                    + "_b4"
-                    + str(beta_int[0])
-                    + "_b5"
-                    + str(beta_int[1])
-                    + "_b7"
-                    + str(beta_int[0] * beta_int[1])
-                ] = (
+                irf_interactions[irf_moment + "_b3" + str(beta_int)] = (
                     irf_interactions[irf_moment + "_" + b1_label]
-                    + (beta_int[0] * irf_interactions[irf_moment + "_" + b4_label])
-                    + (beta_int[1] * irf_interactions[irf_moment + "_" + b5_label])
-                    + (
-                        beta_int[0]
-                        * beta_int[1]
-                        * irf_interactions[irf_moment + "_" + b7_label]
-                    )
+                    + (beta_int * irf_interactions[irf_moment + "_" + b3_label])
                 )
         # clean house
         for irf_moment in ["Mean", "LB", "UB"]:
             del irf_interactions[irf_moment + "_" + b1_label]
-            del irf_interactions[irf_moment + "_" + b4_label]
-            del irf_interactions[irf_moment + "_" + b5_label]
-            del irf_interactions[irf_moment + "_" + b7_label]
+            del irf_interactions[irf_moment + "_" + b3_label]
         irf_interactions = irf_interactions[
-            ~(
-                (irf_interactions["Response"] == b4_label)
-                | (irf_interactions["Response"] == b5_label)
-                | (irf_interactions["Response"] == b7_label)
-            )
+            ~((irf_interactions["Response"] == b3_label))
         ]
         # export
         return irf_interactions
 
-    def plot_triple_interaction_wide_irf(
+    def plot_interaction_wide_irf(
         irf: pd.DataFrame,
         shock_variable: str,  # only used in title and file suffix
         response_variable: str,
         show_ci: bool,
-        beta_ints: list[list[float]],  # [[60.5, 91], [30, 30]]
+        beta_ints: list[float],  # [80, 160]
         beta_int_colours: list[str],
-        interacted_variable_label_nice: str,  # taken from b1_label + "_mult_" + b4_label + "_mult_" + b5_label + "_mult_" + b7_label
+        interacted_variable_label_nice: str,  # taken from b1_label + "_mult_" + b3_label
     ):
         fig = go.Figure()  # 4 lines per chart
         irf_count = 0
@@ -199,18 +147,10 @@ def do_everything_quadrant_interaction_panellp(
             fig.add_trace(
                 go.Scatter(
                     x=irf_sub["Horizon"],
-                    y=irf_sub[
-                        "Mean_"
-                        + "b4"
-                        + str(beta_int[0])
-                        + "_b5"
-                        + str(beta_int[1])
-                        + "_b7"
-                        + str(beta_int[0] * beta_int[1])
-                    ],
+                    y=irf_sub["Mean_" + "b3" + str(beta_int)],
                     name=interacted_variable_label_nice
                     + " = "
-                    + ", ".join([str(i) for i in beta_int]),
+                    + str(beta_int),
                     mode="lines",
                     line=dict(
                         color=beta_int_colours[irf_count],
@@ -223,15 +163,7 @@ def do_everything_quadrant_interaction_panellp(
                 fig.add_trace(
                     go.Scatter(
                         x=irf_sub["Horizon"],
-                        y=irf_sub[
-                            "LB_"
-                            + +"_b4"
-                            + str(beta_int[0])
-                            + "_b5"
-                            + str(beta_int[1])
-                            + "_b7"
-                            + str(beta_int[0] * beta_int[1])
-                        ],
+                        y=irf_sub["LB_" + "b3" + str(beta_int)],
                         name="",
                         mode="lines",
                         line=dict(
@@ -245,15 +177,7 @@ def do_everything_quadrant_interaction_panellp(
                 fig.add_trace(
                     go.Scatter(
                         x=irf_sub["Horizon"],
-                        y=irf_sub[
-                            "UB_"
-                            + +"_b4"
-                            + str(beta_int[0])
-                            + "_b5"
-                            + str(beta_int[1])
-                            + "_b7"
-                            + str(beta_int[0] * beta_int[1])
-                        ],
+                        y=irf_sub["UB_" + "b3" + str(beta_int)],
                         name="",
                         mode="lines",
                         line=dict(
@@ -292,7 +216,7 @@ def do_everything_quadrant_interaction_panellp(
             file_ci_suffix = ""
         fig.write_image(
             path_output
-            + "quadrant_interaction_panellp_"
+            + "uncertainty_interaction_panellp_"
             + file_suffixes
             + "irf_"
             + "modwith_"
@@ -382,17 +306,11 @@ def do_everything_quadrant_interaction_panellp(
                 irf_interaction = irf_interaction_only_wide(
                     irf=irf,
                     b1_label=shock,
-                    b4_label=shock + "_" + cols_state_dependency[0],
-                    b5_label=shock + "_" + cols_state_dependency[1],
-                    b7_label=shock
-                    + "_"
-                    + cols_state_dependency[0]
-                    + "_"
-                    + cols_state_dependency[1],
+                    b3_label=shock + "_" + cols_state_dependency[0],
                     beta_ints=beta_values_to_simulate,
                 )  # interaction terms are calculated twice
                 for endog in cols_all_endog:
-                    plot_triple_interaction_wide_irf(
+                    plot_interaction_wide_irf(
                         irf=irf_interaction,
                         response_variable=endog,
                         shock_variable=shock,  # this way, the file name will only say if mp or unc shocks were used
@@ -421,40 +339,19 @@ cols_endog_short = [
     "corecpi",  # corecpi cpi
     "reer",
 ]
-cols_threshold_hh_gov = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
-debt_values_combos = [
-    [30, 60],  # HH low, gov low
-    # [60, 60],  # HH med, gov low
-    [90, 60],  # HH high, gov low
-    # [30, 90],  # HH low, gov med
-    # [60, 90],  # HH med, gov med
-    # [90, 90],  # HH high, gov med
-    [30, 120],  # HH low, gov high
-    # [60, 120],  # HH med, gov high
-    [90, 120],  # HH high, gov high
-]
-# debt_values_combos_irf_line_colours=[
-#     "lightblue",
-#     "blue",
-#     "darkblue",
-#     "lightgrey",
-#     "grey",
-#     "black",
-#     "pink",
-#     "red",
-#     "crimson",
-# ]
-debt_values_combos_irf_line_colours = ["grey", "pink", "blue", "crimson"]
+cols_threshold_epu = ["epu_ref"]
+epu_values_combos = [80, 160, 250]
+epu_values_combos_irf_line_colours = ["grey", "red", "crimson"]
 
 # %%
 # III --- Do everything
 # With STIR
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2016 Q3
@@ -465,16 +362,16 @@ do_everything_quadrant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 # With STIR (reduced)
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2016 Q3
@@ -485,17 +382,17 @@ do_everything_quadrant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 
 # With M2
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["m2"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2012 Q1
@@ -505,16 +402,16 @@ do_everything_quadrant_interaction_panellp(
         "singapore",  # 2005 Q1
     ],
     file_suffixes="m2_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 # With M2 (reduced)
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["m2"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2012 Q1
@@ -524,17 +421,17 @@ do_everything_quadrant_interaction_panellp(
         "singapore",  # 2005 Q1
     ],
     file_suffixes="m2_reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 
 # With LTIR
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["ltir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2016 Q3
@@ -545,16 +442,16 @@ do_everything_quadrant_interaction_panellp(
         "germany",  # 2006 Q1
     ],
     file_suffixes="ltir_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 # With LTIR (reduced)
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["ltir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2016 Q3
@@ -565,17 +462,17 @@ do_everything_quadrant_interaction_panellp(
         "germany",  # 2006 Q1
     ],
     file_suffixes="ltir_reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 
 # With oneway STIR shocks
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2016 Q3
@@ -586,16 +483,16 @@ do_everything_quadrant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 # With oneway STIR shocks (reduced)
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2016 Q3
@@ -606,17 +503,17 @@ do_everything_quadrant_interaction_panellp(
         "sweden",  # ends 2020 Q3 --- epu
     ],
     file_suffixes="reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 
 # With oneway M2 shocks
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["m2"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2012 Q1
@@ -626,16 +523,16 @@ do_everything_quadrant_interaction_panellp(
         "singapore",  # 2005 Q1
     ],
     file_suffixes="m2_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 # With oneway M2 shocks (reduced)
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["m2"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_epu,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "india",  # 2012 Q1
@@ -645,181 +542,183 @@ do_everything_quadrant_interaction_panellp(
         "singapore",  # 2005 Q1
     ],
     file_suffixes="m2_reduced_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
+    beta_values_to_simulate=epu_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
 )
 
 # %%
 # IV.2 --- Do everything but exclude country by country
-list_countries_master = [
-    "australia",
-    "belgium",
-    "canada",
-    "china",
-    "colombia",
-    "denmark",
-    "france",
-    "germany",
-    "greece",
-    "india",
-    "ireland",
-    "italy",
-    "japan",
-    "mexico",
-    "netherlands",
-    "russian_federation",
-    "singapore",
-    "spain",
-    "sweden",
-    "united_states",
-]
+# list_countries_master = [
+#     "australia",
+#     "belgium",
+#     "canada",
+#     "china",
+#     "colombia",
+#     "denmark",
+#     "france",
+#     "germany",
+#     "greece",
+#     "india",
+#     "ireland",
+#     "italy",
+#     "japan",
+#     "mexico",
+#     "netherlands",
+#     "russian_federation",
+#     "singapore",
+#     "spain",
+#     "sweden",
+#     "united_states",
+# ]
 
-# STIR
-base_countries_to_drop = [
-    "india",  # 2016 Q3
-    "denmark",  # ends 2019 Q3
-    "china",  # 2007 Q4 and potentially exclusive case
-    "colombia",  # 2006 Q4
-    "germany",  # 2006 Q1
-    "sweden",  # ends 2020 Q3 --- epu
-]
-base_countries_included = [
-    i for i in list_countries_master if i not in base_countries_to_drop
-]
-for country_to_exclude in tqdm(base_countries_included):
-    do_everything_quadrant_interaction_panellp(
-        cols_endog_after_shocks=["stir"] + cols_endog_long,
-        cols_all_exog=["maxminbrent"],
-        list_mp_variables=["maxminstir"],
-        list_uncertainty_variables=["maxminepu"],
-        cols_state_dependency=cols_threshold_hh_gov,
-        state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-        countries_drop=base_countries_to_drop + [country_to_exclude],
-        file_suffixes="ex" + country_to_exclude + "_",  # format: "abc_" or ""
-        beta_values_to_simulate=debt_values_combos,
-        irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    )
+# # STIR
+# base_countries_to_drop = [
+#     "india",  # 2016 Q3
+#     "denmark",  # ends 2019 Q3
+#     "china",  # 2007 Q4 and potentially exclusive case
+#     "colombia",  # 2006 Q4
+#     "germany",  # 2006 Q1
+#     "sweden",  # ends 2020 Q3 --- epu
+# ]
+# base_countries_included = [
+#     i for i in list_countries_master if i not in base_countries_to_drop
+# ]
+# for country_to_exclude in tqdm(base_countries_included):
+#     do_everything_single_interaction_panellp(
+#         cols_endog_after_shocks=["stir"] + cols_endog_long,
+#         cols_all_exog=["maxminbrent"],
+#         list_mp_variables=["maxminstir"],
+#         list_uncertainty_variables=["maxminepu"],
+#         cols_state_dependency=cols_threshold_epu,
+#         state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+#         countries_drop=base_countries_to_drop + [country_to_exclude],
+#         file_suffixes="ex" + country_to_exclude + "_",  # format: "abc_" or ""
+#         beta_values_to_simulate=epu_values_combos,
+#         irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+#     )
 
-# STIR (reduced)
-base_countries_included = [
-    i for i in list_countries_master if i not in base_countries_to_drop
-]
-for country_to_exclude in tqdm(base_countries_included):
-    do_everything_quadrant_interaction_panellp(
-        cols_endog_after_shocks=["stir"] + cols_endog_short,
-        cols_all_exog=["maxminbrent"],
-        list_mp_variables=["maxminstir"],
-        list_uncertainty_variables=["maxminepu"],
-        cols_state_dependency=cols_threshold_hh_gov,
-        state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-        countries_drop=base_countries_to_drop + [country_to_exclude],
-        file_suffixes="reduced_ex" + country_to_exclude + "_",  # format: "abc_" or ""
-        beta_values_to_simulate=debt_values_combos,
-        irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    )
+# # STIR (reduced)
+# base_countries_included = [
+#     i for i in list_countries_master if i not in base_countries_to_drop
+# ]
+# for country_to_exclude in tqdm(base_countries_included):
+#     do_everything_single_interaction_panellp(
+#         cols_endog_after_shocks=["stir"] + cols_endog_short,
+#         cols_all_exog=["maxminbrent"],
+#         list_mp_variables=["maxminstir"],
+#         list_uncertainty_variables=["maxminepu"],
+#         cols_state_dependency=cols_threshold_epu,
+#         state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+#         countries_drop=base_countries_to_drop + [country_to_exclude],
+#         file_suffixes="reduced_ex" + country_to_exclude + "_",  # format: "abc_" or ""
+#         beta_values_to_simulate=epu_values_combos,
+#         irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+#     )
 
 # %%
 # IV.3 --- Do everything but exclude certain time periods
 # Post-GFC
 # With STIR
-do_everything_quadrant_interaction_panellp(
-    cols_endog_after_shocks=["stir"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
-    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="postgfc_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_start=date(2012, 1, 1),
-)
+# do_everything_single_interaction_panellp(
+#     cols_endog_after_shocks=["stir"] + cols_endog_long,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_state_dependency=cols_threshold_epu,
+#     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="postgfc_",  # format: "abc_" or ""
+#     beta_values_to_simulate=epu_values_combos,
+#     irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+#     t_start=date(2012, 1, 1),
+# )
 
-# With STIR (reduced)
-do_everything_quadrant_interaction_panellp(
-    cols_endog_after_shocks=["stir"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
-    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="reduced_postgfc_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_start=date(2012, 1, 1),
-)
+# # With STIR (reduced)
+# do_everything_single_interaction_panellp(
+#     cols_endog_after_shocks=["stir"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_state_dependency=cols_threshold_epu,
+#     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="reduced_postgfc_",  # format: "abc_" or ""
+#     beta_values_to_simulate=epu_values_combos,
+#     irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+#     t_start=date(2012, 1, 1),
+# )
 
-# Pre-COVID
-# With STIR
-do_everything_quadrant_interaction_panellp(
-    cols_endog_after_shocks=["stir"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
-    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="precovid_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_end=date(2019, 12, 31),
-)
+# # Pre-COVID
+# # With STIR
+# do_everything_single_interaction_panellp(
+#     cols_endog_after_shocks=["stir"] + cols_endog_long,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_state_dependency=cols_threshold_epu,
+#     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="precovid_",  # format: "abc_" or ""
+#     beta_values_to_simulate=epu_values_combos,
+#     irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+#     t_end=date(2019, 12, 31),
+# )
 
-# With STIR (reduced)
-do_everything_quadrant_interaction_panellp(
-    cols_endog_after_shocks=["stir"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_state_dependency=cols_threshold_hh_gov,
-    state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="reduced_precovid_",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    t_end=date(2019, 12, 31),
-)
+# # With STIR (reduced)
+# do_everything_single_interaction_panellp(
+#     cols_endog_after_shocks=["stir"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_state_dependency=cols_threshold_epu,
+#     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="reduced_precovid_",  # format: "abc_" or ""
+#     beta_values_to_simulate=epu_values_combos,
+#     irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+#     t_end=date(2019, 12, 31),
+# )
 
 
 # %%
 # V --- Do everything but with WUI
+cols_threshold_wui = ["wui_ref"]
+wui_values_combos = [0.2, 0.4, 0.7]
 # With STIR
-do_everything_quadrant_interaction_panellp(
+do_everything_single_interaction_panellp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminwui"],
-    cols_state_dependency=cols_threshold_hh_gov,
+    cols_state_dependency=cols_threshold_wui,
     state_dependency_nice_for_title="HH debt, Gov debt",  # HH debt, Gov debt
     countries_drop=[
         "argentina",
@@ -836,12 +735,14 @@ do_everything_quadrant_interaction_panellp(
         "sweden",
     ],
     file_suffixes="",  # format: "abc_" or ""
-    beta_values_to_simulate=debt_values_combos,
-    irf_colours_for_each_beta=debt_values_combos_irf_line_colours,
-    input_df_suffix="large_yoy"  # different data set
+    beta_values_to_simulate=wui_values_combos,
+    irf_colours_for_each_beta=epu_values_combos_irf_line_colours,
+    input_df_suffix="large_yoy",  # different data set
 )
 
 # %%
 # X --- Notify
 # End
 print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds -----")
+
+# %%

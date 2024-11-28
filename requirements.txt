@@ -6,7 +6,7 @@ fastparquet
 plotly
 openpyxl
 xlrd
-kaleido
+kaleido==0.1.*
 pillow
 statsmodels
 python-dotenv

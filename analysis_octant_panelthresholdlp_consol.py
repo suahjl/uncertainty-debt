@@ -33,13 +33,13 @@ warnings.filterwarnings(
 
 # %%
 # I --- Do everything function
-def do_everything_quadrant_panelthresholdlp(
+def do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks: list[str],
     cols_all_exog: list[str],
     list_mp_variables: list[str],
     list_uncertainty_variables: list[str],
-    cols_threshold: list[str],
-    threshold_variables: list[str],
+    cols_threshold: list[str],  # with _ref
+    threshold_variables: list[str],  # without _ref
     countries_drop: list[str],
     file_suffixes: str,  # format: "abc_" or ""
 ):
@@ -94,137 +94,17 @@ def do_everything_quadrant_panelthresholdlp(
             # Drop NA
             df = df.dropna(axis=0)
 
-            def find_quadrant_thresholds(
+            def find_octant_thresholds(
                 df: pd.DataFrame,
                 threshold_variables: list[str],
+                cols_threshold: list[str],
                 option: str,
                 param_choices: list[float],
             ):
-                if option == "dumb":
-                    df.loc[
-                        df[threshold_variables[0] + "_ref"] >= param_choices[0],
-                        threshold_variables[0] + "_above_threshold",
-                    ] = 1
-                    df.loc[
-                        df[threshold_variables[0] + "_ref"] < param_choices[0],
-                        threshold_variables[0] + "_above_threshold",
-                    ] = 0
-                    df.loc[
-                        df[threshold_variables[1] + "_ref"] >= param_choices[1],
-                        threshold_variables[0] + "_above_threshold",
-                    ] = 1
-                    df.loc[
-                        df[threshold_variables[1] + "_ref"] < param_choices[1],
-                        threshold_variables[1] + "_above_threshold",
-                    ] = 0
-                    # quadrant 1 (0,0)
-                    df.loc[
-                        (
-                            (df[threshold_variables[0] + "_above_threshold"] == 0)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
-                        ),
-                        threshold_variables[0]
-                        + "0"
-                        + "_"
-                        + threshold_variables[1]
-                        + "0",
-                    ] = 1
-                    df.loc[
-                        ~(
-                            (df[threshold_variables[0] + "_above_threshold"] == 0)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
-                        ),
-                        threshold_variables[0]
-                        + "0"
-                        + "_"
-                        + threshold_variables[1]
-                        + "0",
-                    ] = 0
-                    # quadrant 2 (1,0)
-                    df.loc[
-                        (
-                            (df[threshold_variables[0] + "_above_threshold"] == 1)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
-                        ),
-                        threshold_variables[0]
-                        + "1"
-                        + "_"
-                        + threshold_variables[1]
-                        + "0",
-                    ] = 1
-                    df.loc[
-                        ~(
-                            (df[threshold_variables[0] + "_above_threshold"] == 1)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
-                        ),
-                        threshold_variables[0]
-                        + "1"
-                        + "_"
-                        + threshold_variables[1]
-                        + "0",
-                    ] = 0
-                    # quadrant 3 (0,1)
-                    df.loc[
-                        (
-                            (df[threshold_variables[0] + "_above_threshold"] == 0)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
-                        ),
-                        threshold_variables[0]
-                        + "0"
-                        + "_"
-                        + threshold_variables[1]
-                        + "1",
-                    ] = 1
-                    df.loc[
-                        ~(
-                            (df[threshold_variables[0] + "_above_threshold"] == 0)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
-                        ),
-                        threshold_variables[0]
-                        + "0"
-                        + "_"
-                        + threshold_variables[1]
-                        + "1",
-                    ] = 0
-                    # quadrant 4 (1,1)
-                    df.loc[
-                        (
-                            (df[threshold_variables[0] + "_above_threshold"] == 1)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
-                        ),
-                        threshold_variables[0]
-                        + "1"
-                        + "_"
-                        + threshold_variables[1]
-                        + "1",
-                    ] = 1
-                    df.loc[
-                        ~(
-                            (df[threshold_variables[0] + "_above_threshold"] == 1)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
-                        ),
-                        threshold_variables[0]
-                        + "1"
-                        + "_"
-                        + threshold_variables[1]
-                        + "1",
-                    ] = 0
-                    print(
-                        "Threshold of "
-                        + threshold_variables[0]
-                        + " is "
-                        + str(param_choices[0])
-                    )
-                    print(
-                        "Threshold of "
-                        + threshold_variables[1]
-                        + " is "
-                        + str(param_choices[1])
-                    )
-                elif option == "reg_thresholdselection":
+                if option == "reg_thresholdselection":
                     df_opt_threshold = pd.read_csv(
                         path_output
-                        + "reg_quadrant_thresholdselection_"
+                        + "reg_octant_thresholdselection_"
                         + file_suffixes
                         + "fe_"
                         + "modwith_"
@@ -236,31 +116,45 @@ def do_everything_quadrant_panelthresholdlp(
                     )
                     opt_threshold0 = df_opt_threshold.iloc[0, 0]
                     opt_threshold1 = df_opt_threshold.iloc[0, 1]
-                    # first
+                    opt_threshold2 = df_opt_threshold.iloc[0, 2]
+                    # first X
                     df.loc[
-                        df[threshold_variables[0] + "_ref"] >= opt_threshold0,
+                        df[cols_threshold[0]] >= opt_threshold0,
                         threshold_variables[0] + "_above_threshold",
                     ] = 1
                     df.loc[
-                        df[threshold_variables[0] + "_ref"] < opt_threshold0,
+                        df[cols_threshold[0]] < opt_threshold0,
                         threshold_variables[0] + "_above_threshold",
                     ] = 0
-                    # second
+                    # second Y
                     df.loc[
-                        df[threshold_variables[1] + "_ref"] >= opt_threshold1,
+                        df[cols_threshold[1]] >= opt_threshold1,
                         threshold_variables[1] + "_above_threshold",
                     ] = 1
                     df.loc[
-                        df[threshold_variables[1] + "_ref"] < opt_threshold1,
+                        df[cols_threshold[1]] < opt_threshold1,
                         threshold_variables[1] + "_above_threshold",
                     ] = 0
-                    # quadrant 1 (0,0)
+                    # third Z
+                    df.loc[
+                        df[cols_threshold[2]] >= opt_threshold2,
+                        threshold_variables[2] + "_above_threshold",
+                    ] = 1
+                    df.loc[
+                        df[cols_threshold[2]] < opt_threshold2,
+                        threshold_variables[2] + "_above_threshold",
+                    ] = 0
+                    # octant (0,0,0)
                     df.loc[
                         (
                             (df[threshold_variables[0] + "_above_threshold"] == 0)
                             & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
                         + "0"
                         + "_"
                         + threshold_variables[1]
@@ -270,21 +164,29 @@ def do_everything_quadrant_panelthresholdlp(
                         ~(
                             (df[threshold_variables[0] + "_above_threshold"] == 0)
                             & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
                         + "0"
                         + "_"
                         + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
                         + "0",
                     ] = 0
-                    # quadrant 2 (1,0)
+                    # octant (1,0,0)
                     df.loc[
                         (
                             (df[threshold_variables[0] + "_above_threshold"] == 1)
                             & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
-                        + "1"
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
                         + "_"
                         + threshold_variables[1]
                         + "0",
@@ -293,59 +195,204 @@ def do_everything_quadrant_panelthresholdlp(
                         ~(
                             (df[threshold_variables[0] + "_above_threshold"] == 1)
                             & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
-                        + "1"
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
+                    ] = 0
+                    # octant (0,1,0)
+                    df.loc[
+                        (
+                            (df[threshold_variables[0] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
                         + "_"
                         + threshold_variables[1]
                         + "0",
-                    ] = 0
-                    # quadrant 3 (0,1)
-                    df.loc[
-                        (
-                            (df[threshold_variables[0] + "_above_threshold"] == 0)
-                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
-                        ),
-                        threshold_variables[0]
-                        + "0"
-                        + "_"
-                        + threshold_variables[1]
-                        + "1",
                     ] = 1
                     df.loc[
                         ~(
                             (df[threshold_variables[0] + "_above_threshold"] == 0)
                             & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
                         + "0"
                         + "_"
                         + threshold_variables[1]
-                        + "1",
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
                     ] = 0
-                    # quadrant 4 (1,1)
+                    # octant (0,0,1)
+                    df.loc[
+                        (
+                            (df[threshold_variables[0] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0",
+                    ] = 1
+                    df.loc[
+                        ~(
+                            (df[threshold_variables[0] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
+                    ] = 0
+                    # octant (1,1,0)
                     df.loc[
                         (
                             (df[threshold_variables[0] + "_above_threshold"] == 1)
                             & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
-                        + "1"
+                        + "0"
                         + "_"
                         + threshold_variables[1]
-                        + "1",
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0",
                     ] = 1
                     df.loc[
                         ~(
                             (df[threshold_variables[0] + "_above_threshold"] == 1)
                             & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 0)
                         ),
                         threshold_variables[0]
-                        + "1"
+                        + "0"
                         + "_"
                         + threshold_variables[1]
-                        + "1",
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
                     ] = 0
+                    # octant (1,0,1)
+                    df.loc[
+                        (
+                            (df[threshold_variables[0] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0",
+                    ] = 1
+                    df.loc[
+                        ~(
+                            (df[threshold_variables[0] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
+                    ] = 0
+                    # octant (0,1,1)
+                    df.loc[
+                        (
+                            (df[threshold_variables[0] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0",
+                    ] = 1
+                    df.loc[
+                        ~(
+                            (df[threshold_variables[0] + "_above_threshold"] == 0)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
+                    ] = 0
+                    # octant (1,1,1)
+                    df.loc[
+                        (
+                            (df[threshold_variables[0] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0",
+                    ] = 1
+                    df.loc[
+                        ~(
+                            (df[threshold_variables[0] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+                            & (df[threshold_variables[2] + "_above_threshold"] == 1)
+                        ),
+                        threshold_variables[0]
+                        + "0"
+                        + "_"
+                        + threshold_variables[1]
+                        + "0"
+                        + "_"
+                        + threshold_variables[2]
+                        + "0",
+                    ] = 0
+                    # print thresholds for inspection
                     print(
                         "optimal thresholds: "
                         + threshold_variables[0]
@@ -355,15 +402,20 @@ def do_everything_quadrant_panelthresholdlp(
                         + threshold_variables[1]
                         + " = "
                         + str(opt_threshold1)
+                        + " and "
+                        + threshold_variables[2]
+                        + " = "
+                        + str(opt_threshold2)
                     )
                 return df
 
             # Threshold
-            df = find_quadrant_thresholds(
+            df = find_octant_thresholds(
                 df=df,
                 threshold_variables=threshold_variables,
+                cols_threshold=cols_threshold,
                 option="reg_thresholdselection",
-                param_choices=[0, 0],
+                param_choices=[0, 0, 0],
             )
 
             # Reset index
@@ -379,6 +431,7 @@ def do_everything_quadrant_panelthresholdlp(
                 columns=[
                     threshold_variables[0] + "_above_threshold",
                     threshold_variables[1] + "_above_threshold",
+                    threshold_variables[2] + "_above_threshold",
                     "Shock",
                     "Response",
                     "Horizon",
@@ -391,109 +444,77 @@ def do_everything_quadrant_panelthresholdlp(
                 for var1, var1_nice in zip(
                     [0, 1], ["below threshold", "above threshold"]
                 ):
-                    # estimate model
-                    irf_on, irf_off = lp.ThresholdPanelLPX(
-                        data=df,
-                        Y=cols_all_endog,
-                        X=cols_all_exog,
-                        threshold_var=threshold_variables[0]
-                        + str(var0)
-                        + "_"
-                        + threshold_variables[1]
-                        + str(var1),
-                        response=cols_all_endog,
-                        horizon=12,
-                        lags=1,
-                        varcov="kernel",
-                        ci_width=0.8,
-                    )
-                    irf_on.to_parquet(
-                        path_output
-                        + "quadrant_panelthresholdlp_"
-                        + file_suffixes
-                        + "irf_on_"
-                        + threshold_variables[0]
-                        + str(var0)
-                        + "_"
-                        + threshold_variables[1]
-                        + str(var1)
-                        + "modwith_"
-                        + uncertainty_variable
-                        + "_"
-                        + mp_variable
-                        + ".parquet"
-                    )
-                    irf_off.to_parquet(
-                        path_output
-                        + "quadrant_panelthresholdlp_"
-                        + file_suffixes
-                        + "irf_off_"
-                        + threshold_variables[0]
-                        + str(var0)
-                        + "_"
-                        + threshold_variables[1]
-                        + str(var1)
-                        + "modwith_"
-                        + uncertainty_variable
-                        + "_"
-                        + mp_variable
-                        + ".parquet"
-                    )
-                    # plot irf
-                    for shock in [uncertainty_variable, mp_variable]:
-                        fig = lp.ThresholdIRFPlot(
-                            irf_threshold_on=irf_on,
-                            irf_threshold_off=irf_off,
-                            response=cols_all_endog,
-                            shock=[shock],
-                            n_columns=3,
-                            n_rows=3,
-                            maintitle="IRFs of "
-                            + shock
-                            + " shocks when "
-                            + threshold_variables[0]
-                            + " is "
-                            + var0_nice
-                            + " and "
+                    for var2, var2_nice in zip(
+                        [0, 1], ["below threshold", "above threshold"]
+                    ):
+                        # estimate model
+                        irf_on, irf_off = lp.ThresholdPanelLPX(
+                            data=df,
+                            Y=cols_all_endog,
+                            X=cols_all_exog,
+                            threshold_var=threshold_variables[0]
+                            + str(var0)
+                            + "_"
                             + threshold_variables[1]
-                            + " is "
-                            + var1_nice,
-                            show_fig=False,
-                            save_pic=False,
-                            annot_size=12,
-                            font_size=12,
+                            + str(var1)
+                            + "_"
+                            + threshold_variables[2]
+                            + str(var2),
+                            response=cols_all_endog,
+                            horizon=12,
+                            lags=1,
+                            varcov="kernel",
+                            ci_width=0.8,
                         )
-                        # save irf (need to use kaleido==0.1.0post1)
-                        fig.write_image(
+                        irf_on.to_parquet(
                             path_output
-                            + "quadrant_panelthresholdlp_"
+                            + "octant_panelthresholdlp_"
                             + file_suffixes
-                            + "irf_"
+                            + "irf_on_"
                             + threshold_variables[0]
                             + str(var0)
                             + "_"
                             + threshold_variables[1]
                             + str(var1)
+                            + "_"
+                            + threshold_variables[2]
+                            + str(var2)
+                            + "_"
                             + "modwith_"
                             + uncertainty_variable
                             + "_"
                             + mp_variable
-                            + "_"
-                            + "shock"
-                            + shock
-                            + ".png",
-                            height=768,
-                            width=1366,
+                            + ".parquet"
                         )
-                        # only output and inflation
-                        for col in ["gdp", "corecpi"]:
+                        irf_off.to_parquet(
+                            path_output
+                            + "octant_panelthresholdlp_"
+                            + file_suffixes
+                            + "irf_off_"
+                            + threshold_variables[0]
+                            + str(var0)
+                            + "_"
+                            + threshold_variables[1]
+                            + str(var1)
+                            + "_"
+                            + threshold_variables[2]
+                            + str(var2)
+                            + "_"
+                            + "modwith_"
+                            + uncertainty_variable
+                            + "_"
+                            + mp_variable
+                            + ".parquet"
+                        )
+                        # plot irf
+                        for shock in [uncertainty_variable, mp_variable]:
                             fig = lp.ThresholdIRFPlot(
                                 irf_threshold_on=irf_on,
                                 irf_threshold_off=irf_off,
-                                response=[col],
+                                response=cols_all_endog,
                                 shock=[shock],
-                                n_columns=1,
-                                n_rows=1,
+                                n_columns=3,
+                                n_rows=3,
                                 maintitle="IRFs of "
                                 + shock
                                 + " shocks when "
@@ -503,15 +524,20 @@ def do_everything_quadrant_panelthresholdlp(
                                 + " and "
                                 + threshold_variables[1]
                                 + " is "
-                                + var1_nice,
+                                + var1_nice
+                                + " and "
+                                + threshold_variables[2]
+                                + " is "
+                                + var2_nice,
                                 show_fig=False,
                                 save_pic=False,
                                 annot_size=12,
-                                font_size=16,
+                                font_size=12,
                             )
+                            # save irf (need to use kaleido==0.1.0post1)
                             fig.write_image(
                                 path_output
-                                + "quadrant_panelthresholdlp_"
+                                + "octant_panelthresholdlp_"
                                 + file_suffixes
                                 + "irf_"
                                 + threshold_variables[0]
@@ -519,6 +545,10 @@ def do_everything_quadrant_panelthresholdlp(
                                 + "_"
                                 + threshold_variables[1]
                                 + str(var1)
+                                + "_"
+                                + threshold_variables[2]
+                                + str(var2)
+                                + "_"
                                 + "modwith_"
                                 + uncertainty_variable
                                 + "_"
@@ -526,25 +556,78 @@ def do_everything_quadrant_panelthresholdlp(
                                 + "_"
                                 + "shock"
                                 + shock
-                                + "_"
-                                + "response"
-                                + col
                                 + ".png",
                                 height=768,
                                 width=1366,
                             )
-                    # consolidate IRFs of all quadrants for combined plots later (only the red lines where H = 1)
-                    irf_on[threshold_variables[0] + "_above_threshold"] = (
-                        var0  # new columns to indicate if thresholdvar0 > tau
-                    )
-                    irf_on[threshold_variables[1] + "_above_threshold"] = (
-                        var1  # new columns to indicate if thresholdvar1 > tau
-                    )
-                    # merge
-                    irf_consol = pd.concat([irf_consol, irf_on], axis=0)
+                            # only output and inflation
+                            for col in ["gdp", "corecpi"]:
+                                fig = lp.ThresholdIRFPlot(
+                                    irf_threshold_on=irf_on,
+                                    irf_threshold_off=irf_off,
+                                    response=[col],
+                                    shock=[shock],
+                                    n_columns=1,
+                                    n_rows=1,
+                                    maintitle="IRFs of "
+                                    + shock
+                                    + " shocks when "
+                                    + threshold_variables[0]
+                                    + " is "
+                                    + var0_nice
+                                    + " and "
+                                    + threshold_variables[1]
+                                    + " is "
+                                    + var1_nice
+                                    + " and "
+                                    + threshold_variables[2]
+                                    + " is "
+                                    + var2_nice,
+                                    show_fig=False,
+                                    save_pic=False,
+                                    annot_size=12,
+                                    font_size=16,
+                                )
+                                fig.write_image(
+                                    path_output
+                                    + "octant_panelthresholdlp_"
+                                    + file_suffixes
+                                    + "irf_"
+                                    + threshold_variables[0]
+                                    + str(var0)
+                                    + "_"
+                                    + threshold_variables[1]
+                                    + str(var1)
+                                    + "_"
+                                    + threshold_variables[2]
+                                    + str(var2)
+                                    + "_"
+                                    + "modwith_"
+                                    + uncertainty_variable
+                                    + "_"
+                                    + mp_variable
+                                    + "_"
+                                    + "shock"
+                                    + shock
+                                    + "_"
+                                    + "response"
+                                    + col
+                                    + ".png",
+                                    height=768,
+                                    width=1366,
+                                )
+                        # consolidate IRFs of all octants for combined plots later (only the red lines where H = 1)
+                        irf_on[threshold_variables[0] + "_above_threshold"] = (
+                            var0  # new columns to indicate if thresholdvar0 > tau
+                        )
+                        irf_on[threshold_variables[1] + "_above_threshold"] = (
+                            var1  # new columns to indicate if thresholdvar1 > tau
+                        )
+                        # merge
+                        irf_consol = pd.concat([irf_consol, irf_on], axis=0)
             irf_consol.to_parquet(
                 path_output
-                + "quadrant_panelthresholdlp_"
+                + "octant_panelthresholdlp_"
                 + file_suffixes
                 + "irf_"
                 + "modwith_"
@@ -555,96 +638,123 @@ def do_everything_quadrant_panelthresholdlp(
             )
 
             # Replot IRFs variable by variable for all 4 regimes
-            def plot_quadrant_irf(show_ci: bool):
-                quadrant_colours = [
+            def plot_octant_irf(show_ci: bool):
+                octant_colours = [
+                    "grey",
+                    "pink",
+                    "blue",
+                    "crimson",
                     "black",
-                    "lightgrey",
-                    "cadetblue",
-                    "red",
-                ]  # 00, 10, 01, 11
-                quadrant_width = [3, 2, 2, 3]  # 00, 10, 01, 11
+                    "orangered",
+                    "midnightblue",
+                    "maroon",
+                ]  # 000, 100, 010, 001, 110, 101, 011, 111
+                octant_width = [
+                    3,
+                    2,
+                    2,
+                    2,
+                    2,
+                    2,
+                    2,
+                    3,
+                ]  # 000, 100, 010, 001, 110, 101, 011, 111
                 for shock in [uncertainty_variable, mp_variable]:
                     for endog in cols_all_endog:
-                        fig = go.Figure()  # 4 lines per chart
-                        quadrant_count = 0
+                        fig = go.Figure()  # 8 lines per chart
+                        octant_count = 0
                         for var0, var0_nice in zip(
                             [0, 1], ["below threshold", "above threshold"]
                         ):
                             for var1, var1_nice in zip(
                                 [0, 1], ["below threshold", "above threshold"]
                             ):
-                                # subset
-                                irf_sub = irf_consol[
-                                    (
-                                        (irf_consol["Shock"] == shock)
-                                        & (irf_consol["Response"] == endog)
-                                        & (
-                                            irf_consol[
-                                                threshold_variables[0]
-                                                + "_above_threshold"
-                                            ]
-                                            == var0
+                                for var2, var2_nice in zip(
+                                    [0, 1], ["below threshold", "above threshold"]
+                                ):
+                                    # subset
+                                    irf_sub = irf_consol[
+                                        (
+                                            (irf_consol["Shock"] == shock)
+                                            & (irf_consol["Response"] == endog)
+                                            & (
+                                                irf_consol[
+                                                    threshold_variables[0]
+                                                    + "_above_threshold"
+                                                ]
+                                                == var0
+                                            )
+                                            & (
+                                                irf_consol[
+                                                    threshold_variables[1]
+                                                    + "_above_threshold"
+                                                ]
+                                                == var1
+                                            )
+                                            & (
+                                                irf_consol[
+                                                    threshold_variables[2]
+                                                    + "_above_threshold"
+                                                ]
+                                                == var2
+                                            )
                                         )
-                                        & (
-                                            irf_consol[
-                                                threshold_variables[1]
-                                                + "_above_threshold"
-                                            ]
-                                            == var1
-                                        )
-                                    )
-                                ].copy()
-                                # mean irf
-                                fig.add_trace(
-                                    go.Scatter(
-                                        x=irf_sub["Horizon"],
-                                        y=irf_sub["Mean"],
-                                        name=threshold_variables[0]
-                                        + " "
-                                        + var0_nice
-                                        + " and "
-                                        + threshold_variables[1]
-                                        + " "
-                                        + var1_nice,
-                                        mode="lines",
-                                        line=dict(
-                                            color=quadrant_colours[quadrant_count],
-                                            width=quadrant_width[quadrant_count],
-                                            dash="solid",
-                                        ),
-                                    )
-                                )
-                                if show_ci:
-                                    # lower bound
+                                    ].copy()
+                                    # mean irf
                                     fig.add_trace(
                                         go.Scatter(
                                             x=irf_sub["Horizon"],
-                                            y=irf_sub["LB"],
-                                            name="",
+                                            y=irf_sub["Mean"],
+                                            name=threshold_variables[0]
+                                            + " "
+                                            + var0_nice
+                                            + " and "
+                                            + threshold_variables[1]
+                                            + " "
+                                            + var1_nice
+                                            + " and "
+                                            + threshold_variables[2]
+                                            + " "
+                                            + var2_nice,
                                             mode="lines",
                                             line=dict(
-                                                color=quadrant_colours[quadrant_count],
-                                                width=1,
-                                                dash="dash",
+                                                color=octant_colours[octant_count],
+                                                width=octant_width[octant_count],
+                                                dash="solid",
                                             ),
                                         )
                                     )
-                                    # upper bound
-                                    fig.add_trace(
-                                        go.Scatter(
-                                            x=irf_sub["Horizon"],
-                                            y=irf_sub["UB"],
-                                            name="",
-                                            mode="lines",
-                                            line=dict(
-                                                color=quadrant_colours[quadrant_count],
-                                                width=1,
-                                                dash="dash",
-                                            ),
+                                    if show_ci:
+                                        # lower bound
+                                        fig.add_trace(
+                                            go.Scatter(
+                                                x=irf_sub["Horizon"],
+                                                y=irf_sub["LB"],
+                                                name="",
+                                                mode="lines",
+                                                line=dict(
+                                                    color=octant_colours[octant_count],
+                                                    width=1,
+                                                    dash="dash",
+                                                ),
+                                            )
                                         )
-                                    )
-                                # next
-                                quadrant_count += 1
+                                        # upper bound
+                                        fig.add_trace(
+                                            go.Scatter(
+                                                x=irf_sub["Horizon"],
+                                                y=irf_sub["UB"],
+                                                name="",
+                                                mode="lines",
+                                                line=dict(
+                                                    color=octant_colours[octant_count],
+                                                    width=1,
+                                                    dash="dash",
+                                                ),
+                                            )
+                                        )
+                                    # next
+                                    octant_count += 1
                         # format
                         fig.add_hline(
                             y=0,
@@ -670,7 +780,7 @@ def do_everything_quadrant_panelthresholdlp(
                             file_ci_suffix = ""
                         fig.write_image(
                             path_output
-                            + "quadrant_panelthresholdlp_"
+                            + "octant_panelthresholdlp_"
                             + file_suffixes
                             + "irf_"
                             + "modwith_"
@@ -689,8 +799,8 @@ def do_everything_quadrant_panelthresholdlp(
                             width=1366,
                         )
 
-            plot_quadrant_irf(show_ci=False)
-            plot_quadrant_irf(show_ci=True)
+            plot_octant_irf(show_ci=False)
+            plot_octant_irf(show_ci=True)
 
 
 # %%
@@ -712,17 +822,17 @@ cols_endog_short = [
     "corecpi",  # corecpi cpi
     "reer",
 ]
-cols_threshold_hh_gov_ref = ["hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
-cols_threshold_hh_gov = ["hhdebt_ngdp", "govdebt_ngdp"]
+cols_threshold_epu_hh_gov_ref = ["epu_ref", "hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
+cols_threshold_epu_hh_gov = ["epu_ref", "hhdebt_ngdp", "govdebt_ngdp"]
 
 # With STIR
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -734,13 +844,13 @@ do_everything_quadrant_panelthresholdlp(
     file_suffixes="",  # format: "abc_" or ""
 )
 # With STIR (reduced)
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["stir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -753,13 +863,13 @@ do_everything_quadrant_panelthresholdlp(
 )
 
 # With M2
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["m2"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -770,13 +880,13 @@ do_everything_quadrant_panelthresholdlp(
     file_suffixes="m2_",  # format: "abc_" or ""
 )
 # With M2 (reduced)
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["m2"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -788,13 +898,13 @@ do_everything_quadrant_panelthresholdlp(
 )
 
 # With LTIR
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["ltir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -806,13 +916,13 @@ do_everything_quadrant_panelthresholdlp(
     file_suffixes="ltir_",  # format: "abc_" or ""
 )
 # With LTIR (reduced)
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["ltir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxminltir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -825,13 +935,13 @@ do_everything_quadrant_panelthresholdlp(
 )
 
 # With oneway STIR shocks
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["stir"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -843,13 +953,13 @@ do_everything_quadrant_panelthresholdlp(
     file_suffixes="",  # format: "abc_" or ""
 )
 # With oneway STIR shocks (reduced)
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["stir"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxstir", "minstir"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2016 Q3
         "denmark",  # ends 2019 Q3
@@ -862,13 +972,13 @@ do_everything_quadrant_panelthresholdlp(
 )
 
 # With oneway M2 shocks
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["m2"] + cols_endog_long,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -879,13 +989,13 @@ do_everything_quadrant_panelthresholdlp(
     file_suffixes="m2_",  # format: "abc_" or ""
 )
 # With oneway M2 shocks (reduced)
-do_everything_quadrant_panelthresholdlp(
+do_everything_octant_panelthresholdlp(
     cols_endog_after_shocks=["m2"] + cols_endog_short,
     cols_all_exog=["maxminbrent"],
     list_mp_variables=["maxm2", "minm2"],
     list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_hh_gov_ref,
-    threshold_variables=cols_threshold_hh_gov,
+    cols_threshold=cols_threshold_epu_hh_gov_ref,
+    threshold_variables=cols_threshold_epu_hh_gov,
     countries_drop=[
         "india",  # 2012 Q1
         "china",  # 2007 Q1 and potentially exclusive case
@@ -903,9 +1013,3 @@ do_everything_quadrant_panelthresholdlp(
 print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds -----")
 
 # %%
-
-"""
-2024-11-28 note:
-- Deadend with octant (EPU, HH debt and Gov debt as thresholds): Collinear terms when estimating threshold model
-- Research angle is also potentially too broad 
-"""

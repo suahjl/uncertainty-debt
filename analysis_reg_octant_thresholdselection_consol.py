@@ -1,0 +1,919 @@
+# %%
+import pandas as pd
+import numpy as np
+from datetime import date, timedelta
+import re
+from helper import telsendmsg, telsendimg, telsendfiles, fe_reg, heatmap
+import localprojections as lp
+from tqdm import tqdm
+import time
+import os
+from dotenv import load_dotenv
+import ast
+from tabulate import tabulate
+import warnings
+
+time_start = time.time()
+
+
+# %%
+# 0 --- Main settings
+load_dotenv()
+path_data = "./data/"
+path_output = "./output/"
+path_ceic = "./ceic/"
+tel_config = os.getenv("TEL_CONFIG")
+t_start = date(1990, 1, 1)
+
+pd.options.mode.chained_assignment = None
+warnings.filterwarnings(
+    "ignore"
+)  # MissingValueWarning when localprojections implements shift operations
+
+heatmaps_y_fontsize = 12
+heatmaps_x_fontsize = 12
+heatmaps_title_fontsize = 12
+heatmaps_annot_fontsize = 12
+
+# %%
+# I --- Do everything function
+
+
+def do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp: list[str],
+    cols_all_exog: list[str],
+    list_mp_variables: list[str],
+    list_uncertainty_variables: list[str],
+    cols_threshold: list[str],  # the ones with _ref
+    threshold_variables: list[str],  # the ones without _ref
+    countries_drop: list[str],
+    file_suffixes: str,  # format: "abc_" or ""
+):
+    # Notify
+    print("Estimating " + file_suffixes + " now\n")
+
+    # 0 --- The workhorse functions
+    def latin_hypercube_sampling(n_samples: int, bounds: list[tuple[float]]):
+        """
+        Perform Latin Hypercube Sampling (LHS).
+        
+        Parameters:
+            n_samples (int): Number of samples to generate.
+            bounds (list of tuples): List of (lower, upper) bounds for each variable. 
+                                    For example: [(0, 1), (10, 100), (50, 200)]
+        
+        Returns:
+            np.ndarray: An array of shape (n_samples, n_variables) containing the samples.
+        """
+        n_variables = len(bounds)
+        # Initialize the LHS matrix
+        lhs = np.zeros((n_samples, n_variables))
+        # Generate LHS for each variable
+        for i, (lower, upper) in enumerate(bounds):
+            # Create n_samples equally spaced intervals and shuffle them
+            intervals = np.linspace(0, 1, n_samples + 1)[:-1]  # Exclude upper bound
+            np.random.shuffle(intervals)
+            # Generate random points within each interval
+            random_points = intervals + np.random.rand(n_samples) / n_samples    
+            # Scale the points to the given bounds
+            lhs[:, i] = lower + random_points * (upper - lower)
+        # Output
+        lhs = list(lhs)
+        return lhs
+
+    # W + X + Y + Z + WX + WY + WZ + XY + XZ + YZ + WXY + WXY + WYZ + XYZ + WXYZ (15 terms in total)
+    def octant_thresholdsearch_fe(
+        data: pd.DataFrame,
+        y_col: str,
+        threshold_input_cols: list[str],
+        new_threshold_col_names: list[str],
+        x_interactedwith_threshold_col: str,
+        other_x_cols: list[str],
+        threshold_ranges: list[list[float]],
+        threshold_range_skip: list[float],
+        entity_col: str,
+        time_col: str,
+    ):
+        # deep copy
+        df = data.copy()
+        # main frame to keep log likelihoods
+        df_loglik = pd.DataFrame(columns=["threshold", "loglik"])
+        df_aicc = pd.DataFrame(columns=["threshold", "aicc"])
+        # iterate through threshold candidates
+        for threshold0 in np.arange(
+            threshold_ranges[0][0], threshold_ranges[0][1], threshold_range_skip[0]
+        ):  # first threshold variable
+            for threshold1 in np.arange(
+                threshold_ranges[1][0], threshold_ranges[1][1], threshold_range_skip[1]
+            ):  # second threshold variable
+                for threshold2 in np.arange(
+                    threshold_ranges[2][0], threshold_ranges[2][1], threshold_range_skip[2]
+                ):  # second threshold variable
+                    # For inspection
+                    print(
+                        "Checking "
+                        + threshold_input_cols[0]
+                        + ": "
+                        + str(threshold0)
+                        + " and "
+                        + threshold_input_cols[1]
+                        + ": "
+                        + str(threshold1)
+                        + " and "
+                        + threshold_input_cols[2]
+                        + ": "
+                        + str(threshold2)
+                    )
+                    # create threshold variables
+                    df.loc[
+                        df[threshold_input_cols[0]] <= threshold0,
+                        new_threshold_col_names[0],
+                    ] = 1  # first X
+                    df.loc[
+                        df[threshold_input_cols[0]] > threshold0,
+                        new_threshold_col_names[0],
+                    ] = 0
+                    df.loc[
+                        df[threshold_input_cols[1]] <= threshold1,
+                        new_threshold_col_names[1],
+                    ] = 1  # second Y
+                    df.loc[
+                        df[threshold_input_cols[1]] > threshold1,
+                        new_threshold_col_names[1],
+                    ] = 0
+                    df.loc[
+                        df[threshold_input_cols[2]] <= threshold2,
+                        new_threshold_col_names[2],
+                    ] = 1  # third Z
+                    df.loc[
+                        df[threshold_input_cols[2]] > threshold2,
+                        new_threshold_col_names[2],
+                    ] = 0
+                    # interactions
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[0]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[0]]
+                    )  # first WX
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[1]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[1]]
+                    )  # second WY
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[2]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[2]]
+                    )  # third WZ
+                    df[
+                        new_threshold_col_names[0] + "_" + new_threshold_col_names[1]
+                    ] = (
+                        df[new_threshold_col_names[0]] * df[new_threshold_col_names[1]]
+                    )  # threshold interaction XY
+                    df[
+                        new_threshold_col_names[0] + "_" + new_threshold_col_names[2]
+                    ] = (
+                        df[new_threshold_col_names[0]] * df[new_threshold_col_names[2]]
+                    )  # threshold interaction XZ
+                    df[
+                        new_threshold_col_names[1] + "_" + new_threshold_col_names[2]
+                    ] = (
+                        df[new_threshold_col_names[1]] * df[new_threshold_col_names[2]]
+                    )  # threshold interaction YZ
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[0]
+                        + "_"
+                        + new_threshold_col_names[1]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[0]]
+                        * df[new_threshold_col_names[1]]
+                    )  # triple interaction WXY
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[0]
+                        + "_"
+                        + new_threshold_col_names[2]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[0]]
+                        * df[new_threshold_col_names[2]]
+                    )  # triple interaction WXZ
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[1]
+                        + "_"
+                        + new_threshold_col_names[2]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[1]]
+                        * df[new_threshold_col_names[2]]
+                    )  # triple interaction WYZ
+                    df[
+                        new_threshold_col_names[0]
+                        + "_"
+                        + new_threshold_col_names[1]
+                        + "_"
+                        + new_threshold_col_names[2]
+                    ] = (
+                        df[new_threshold_col_names[0]]
+                        * df[new_threshold_col_names[1]]
+                        * df[new_threshold_col_names[2]]
+                    )  # triple interaction XYZ
+                    df[
+                        x_interactedwith_threshold_col
+                        + "_"
+                        + new_threshold_col_names[0]
+                        + "_"
+                        + new_threshold_col_names[1]
+                        + "_"
+                        + new_threshold_col_names[2]
+                    ] = (
+                        df[x_interactedwith_threshold_col]
+                        * df[new_threshold_col_names[0]]
+                        * df[new_threshold_col_names[1]]
+                        * df[new_threshold_col_names[2]]
+                    )  # triple interaction WXYZ
+                    # estimate
+                    mod, res, params_table, joint_teststats, reg_det = fe_reg(
+                        df=df,
+                        y_col=y_col,
+                        x_cols=other_x_cols
+                        + [
+                            x_interactedwith_threshold_col,  # W
+                            new_threshold_col_names[0],  # first X
+                            new_threshold_col_names[1],  # second Y
+                            new_threshold_col_names[2],  # third Z
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[0],  # WX
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[1],  # WY
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[2],  # WZ
+                            new_threshold_col_names[0]
+                            + "_"
+                            + new_threshold_col_names[1],  # XY
+                            new_threshold_col_names[0]
+                            + "_"
+                            + new_threshold_col_names[2],  # XZ
+                            new_threshold_col_names[1]
+                            + "_"
+                            + new_threshold_col_names[2],  # YZ
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[0]
+                            + "_"
+                            + new_threshold_col_names[1],  # WXY
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[0]
+                            + "_"
+                            + new_threshold_col_names[2],  # WXZ
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[1]
+                            + "_"
+                            + new_threshold_col_names[2],  # WYZ
+                            new_threshold_col_names[0]
+                            + "_"
+                            + new_threshold_col_names[1]
+                            + "_"
+                            + new_threshold_col_names[2],  # XYZ
+                            x_interactedwith_threshold_col
+                            + "_"
+                            + new_threshold_col_names[0]
+                            + "_"
+                            + new_threshold_col_names[1]
+                            + "_"
+                            + new_threshold_col_names[2],  # WXYZ
+                        ],  # total 15 terms
+                        i_col=entity_col,
+                        t_col=time_col,
+                        fixed_effects=True,  # SET TO TRUE for FE, FALSE for POLS
+                        time_effects=False,
+                        cov_choice="robust",
+                    )
+                    # log likelihood
+                    df_loglik_sub = pd.DataFrame(
+                        {
+                            threshold_input_cols[0] + "_threshold": [threshold0],
+                            threshold_input_cols[1] + "_threshold": [threshold1],
+                            threshold_input_cols[2] + "_threshold": [threshold2],
+                            "loglik": [res.loglik],
+                        }
+                    )
+                    df_loglik = pd.concat(
+                        [df_loglik, df_loglik_sub], axis=0
+                    )  # top down
+                    # AICc
+                    df_aicc_sub = pd.DataFrame(
+                        {
+                            threshold_input_cols[0] + "_threshold": [threshold0],
+                            threshold_input_cols[1] + "_threshold": [threshold1],
+                            threshold_input_cols[2] + "_threshold": [threshold2],
+                            "aicc": [
+                                (-2 * res.loglik + 2 * res.df_model)
+                                + (
+                                    (2 * res.df_model * (res.df_model + 1))
+                                    / (res.entity_info.total - res.df_model - 1)
+                                )
+                            ],
+                        }
+                    )
+                    df_aicc = pd.concat([df_aicc, df_aicc_sub], axis=0)  # top down
+        # find optimal threshold
+        # threshold_optimal = df_loglik.loc[
+        #     df_loglik["loglik"] == df_loglik["loglik"].max(), "threshold"
+        # ].reset_index(drop=True)[0]
+        threshold0_optimal = df_aicc.loc[
+            df_aicc["aicc"] == df_aicc["aicc"].min(),
+            threshold_input_cols[0] + "_threshold",
+        ].reset_index(drop=True)[0]
+        threshold1_optimal = df_aicc.loc[
+            df_aicc["aicc"] == df_aicc["aicc"].min(),
+            threshold_input_cols[1] + "_threshold",
+        ].reset_index(drop=True)[0]
+        threshold2_optimal = df_aicc.loc[
+            df_aicc["aicc"] == df_aicc["aicc"].min(),
+            threshold_input_cols[2] + "_threshold",
+        ].reset_index(drop=True)[0]
+        print(df_aicc)
+        # estimate optimal model
+        df.loc[
+            df[threshold_input_cols[0]] <= threshold0_optimal,
+            new_threshold_col_names[0],
+        ] = 1  # X
+        df.loc[
+            df[threshold_input_cols[0]] > threshold0_optimal, new_threshold_col_names[0]
+        ] = 0
+        df.loc[
+            df[threshold_input_cols[1]] <= threshold1_optimal,
+            new_threshold_col_names[1],
+        ] = 1  # Y
+        df.loc[
+            df[threshold_input_cols[2]] <= threshold2_optimal,
+            new_threshold_col_names[2],
+        ] = 1  # Z
+        df.loc[
+            df[threshold_input_cols[1]] > threshold1_optimal, new_threshold_col_names[1]
+        ] = 0
+        # interactions
+        df[x_interactedwith_threshold_col + "_" + new_threshold_col_names[0]] = (
+            df[x_interactedwith_threshold_col] * df[new_threshold_col_names[0]]
+        )  # WX
+        df[x_interactedwith_threshold_col + "_" + new_threshold_col_names[1]] = (
+            df[x_interactedwith_threshold_col] * df[new_threshold_col_names[1]]
+        )  # WY
+        df[x_interactedwith_threshold_col + "_" + new_threshold_col_names[2]] = (
+            df[x_interactedwith_threshold_col] * df[new_threshold_col_names[2]]
+        )  # WZ
+        df[new_threshold_col_names[0] + "_" + new_threshold_col_names[1]] = (
+            df[new_threshold_col_names[0]] * df[new_threshold_col_names[1]]
+        )  # XY
+        df[new_threshold_col_names[0] + "_" + new_threshold_col_names[2]] = (
+            df[new_threshold_col_names[0]] * df[new_threshold_col_names[2]]
+        )  # XZ
+        df[new_threshold_col_names[1] + "_" + new_threshold_col_names[2]] = (
+            df[new_threshold_col_names[1]] * df[new_threshold_col_names[2]]
+        )  # YZ
+        df[
+            x_interactedwith_threshold_col
+            + "_"
+            + new_threshold_col_names[0]
+            + "_"
+            + new_threshold_col_names[1]
+        ] = (
+            df[x_interactedwith_threshold_col]
+            * df[new_threshold_col_names[0]]
+            * df[new_threshold_col_names[1]]
+        )  # WXY
+        df[
+            x_interactedwith_threshold_col
+            + "_"
+            + new_threshold_col_names[0]
+            + "_"
+            + new_threshold_col_names[2]
+        ] = (
+            df[x_interactedwith_threshold_col]
+            * df[new_threshold_col_names[0]]
+            * df[new_threshold_col_names[2]]
+        )  # WXZ
+        df[
+            x_interactedwith_threshold_col
+            + "_"
+            + new_threshold_col_names[1]
+            + "_"
+            + new_threshold_col_names[2]
+        ] = (
+            df[x_interactedwith_threshold_col]
+            * df[new_threshold_col_names[1]]
+            * df[new_threshold_col_names[2]]
+        )  # WYZ
+        df[
+            new_threshold_col_names[0]
+            + "_"
+            + new_threshold_col_names[1]
+            + "_"
+            + new_threshold_col_names[2]
+        ] = (
+            df[new_threshold_col_names[0]]
+            * df[new_threshold_col_names[1]]
+            * df[new_threshold_col_names[2]]
+        )  # XYZ
+        df[
+            x_interactedwith_threshold_col
+            + "_"
+            + new_threshold_col_names[0]
+            + "_"
+            + new_threshold_col_names[1]
+            + "_"
+            + new_threshold_col_names[2]
+        ] = (
+            df[x_interactedwith_threshold_col]
+            * df[new_threshold_col_names[0]]
+            * df[new_threshold_col_names[1]]
+            * df[new_threshold_col_names[2]]
+        )  # WXYZ
+        mod, res, params_table, joint_teststats, reg_det = fe_reg(
+            df=df,
+            y_col=y_col,
+            x_cols=other_x_cols
+            + [
+                x_interactedwith_threshold_col,
+                new_threshold_col_names[0],  # first
+                new_threshold_col_names[1],  # second
+                x_interactedwith_threshold_col
+                + "_"
+                + new_threshold_col_names[0],  # first
+                x_interactedwith_threshold_col
+                + "_"
+                + new_threshold_col_names[1],  # second
+                new_threshold_col_names[0]
+                + "_"
+                + new_threshold_col_names[1],  # threshold interaction
+                x_interactedwith_threshold_col
+                + "_"
+                + new_threshold_col_names[0]
+                + "_"
+                + new_threshold_col_names[1],  # triple interaction
+            ],
+            i_col=entity_col,
+            t_col=time_col,
+            fixed_effects=True,
+            time_effects=False,
+            cov_choice="robust",
+        )
+        # output
+        return (
+            params_table,
+            joint_teststats,
+            threshold0_optimal,
+            threshold1_optimal,
+            threshold2_optimal,
+            df_loglik,
+            df_aicc,
+        )
+
+    # I --- Other nested functions
+    def check_balance_timing(input):
+        min_quarter_by_country = input.copy()
+        min_quarter_by_country = min_quarter_by_country.dropna(axis=0)
+        min_quarter_by_country = (
+            min_quarter_by_country.groupby("country")["quarter"].min().reset_index()
+        )
+        print(tabulate(min_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+    def check_balance_endtiming(input):
+        max_quarter_by_country = input.copy()
+        max_quarter_by_country = max_quarter_by_country.dropna(axis=0)
+        max_quarter_by_country = (
+            max_quarter_by_country.groupby("country")["quarter"].max().reset_index()
+        )
+        print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+    # II --- The loopy part
+    for mp_variable in tqdm(list_mp_variables):
+        for uncertainty_variable in tqdm(list_uncertainty_variables):
+            print("\nMP variable is " + mp_variable)
+            print("Uncertainty variable is " + uncertainty_variable)
+            # II --- Load data
+            df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
+            # III --- Additional wrangling
+            # Groupby ref
+            cols_groups = ["country", "quarter"]
+            # Trim columns
+            cols_all_endog = cols_endog_ex_shocks_and_gdp.copy()
+            df = df[
+                cols_groups
+                + cols_all_endog
+                + cols_all_exog
+                + cols_threshold
+                + [uncertainty_variable]
+                + [mp_variable]
+                + ["gdp"]
+            ].copy()
+            # Check when the panel becomes balanced
+            check_balance_timing(input=df)
+            check_balance_endtiming(input=df)
+            # Trim more countries
+            df = df[~df["country"].isin(countries_drop)].copy()
+            # Check again when panel becomes balanced
+            check_balance_timing(input=df)
+            check_balance_endtiming(input=df)
+            # Timebound
+            df["date"] = pd.to_datetime(df["quarter"]).dt.date
+            df = df[(df["date"] >= t_start)]
+            del df["date"]
+            # Drop NA
+            df = df.dropna(axis=0)
+
+            # Reset index
+            df = df.reset_index(drop=True)
+            # Numeric time
+            df["time"] = df.groupby("country").cumcount()
+            del df["quarter"]
+            # Set multiindex
+            # df = df.set_index(["country", "time"])
+
+            # IV --- Analysis
+            # estimate model
+            (
+                params_table_fe,
+                joint_teststats_fe,
+                threshold0_optimal_fe,
+                threshold1_optimal_fe,
+                threshold2_optimal_fe,
+                df_loglik_fe,
+                df_aicc_fe,
+            ) = octant_thresholdsearch_fe(
+                data=df,
+                y_col="gdp",
+                threshold_input_cols=cols_threshold,
+                new_threshold_col_names=[i + "_threshold" for i in threshold_variables],
+                x_interactedwith_threshold_col=uncertainty_variable,
+                other_x_cols=cols_all_endog + cols_all_exog + [mp_variable],
+                threshold_ranges=[
+                    [
+                        int(
+                            df.groupby("country")[cols_threshold[0]]
+                            .quantile(0.2)
+                            .median()  # min()
+                        ),
+                        int(
+                            df.groupby("country")[cols_threshold[0]]
+                            .quantile(0.8)
+                            .median()  # max()
+                        )
+                        + int(1),
+                    ],
+                    [
+                        int(
+                            df.groupby("country")[cols_threshold[1]]
+                            .quantile(0.2)
+                            .median()  # min()
+                        ),
+                        int(
+                            df.groupby("country")[cols_threshold[1]]
+                            .quantile(0.8)
+                            .median()  # max()
+                        )
+                        + int(1),
+                    ],
+                    [
+                        int(
+                            df.groupby("country")[cols_threshold[2]]
+                            .quantile(0.2)
+                            .median()  # min()
+                        ),
+                        int(
+                            df.groupby("country")[cols_threshold[2]]
+                            .quantile(0.8)
+                            .median()  # max()
+                        )
+                        + int(1),
+                    ],
+                ],
+                threshold_range_skip=[5, 1, 1],
+                entity_col="country",
+                time_col="time",
+            )
+            file_name = (
+                path_output
+                + "reg_octant_thresholdselection_"
+                + file_suffixes
+                + "fe_"
+                + "modwith_"
+                + uncertainty_variable
+                + "_"
+                + mp_variable
+            )
+            chart_title = (
+                "FE regression "
+                + "\n (optimal thresholds: "
+                + threshold_variables[0]
+                + " = "
+                + str(threshold0_optimal_fe)
+                + " and "
+                + threshold_variables[1]
+                + " = "
+                + str(threshold1_optimal_fe)
+                + " and "
+                + threshold_variables[2]
+                + " = "
+                + str(threshold2_optimal_fe)
+                + ")"
+            )
+            print(
+                "optimal thresholds: "
+                + threshold_variables[0]
+                + " = "
+                + str(threshold0_optimal_fe)
+                + " and "
+                + threshold_variables[1]
+                + " = "
+                + str(threshold1_optimal_fe)
+                + " and "
+                + threshold_variables[2]
+                + " = "
+                + str(threshold2_optimal_fe)
+            )
+            df_opt_threshold = pd.DataFrame(
+                {
+                    threshold_variables[0]: [threshold0_optimal_fe],
+                    threshold_variables[1]: [threshold1_optimal_fe],
+                    threshold_variables[2]: [threshold2_optimal_fe],
+                }
+            )
+            df_opt_threshold.to_csv(file_name + "_opt_threshold" + ".csv", index=False)
+            fig = heatmap(
+                input=params_table_fe,
+                mask=False,
+                colourmap="vlag",
+                outputfile=file_name + ".png",
+                title=chart_title,
+                lb=params_table_fe.min().min(),
+                ub=params_table_fe.max().max(),
+                format=".4f",
+                show_annot=True,
+                y_fontsize=heatmaps_y_fontsize,
+                x_fontsize=heatmaps_x_fontsize,
+                title_fontsize=heatmaps_title_fontsize,
+                annot_fontsize=heatmaps_annot_fontsize,
+            )
+            fig = heatmap(
+                input=joint_teststats_fe,
+                mask=False,
+                colourmap="vlag",
+                outputfile=file_name + "_joint_teststats" + ".png",
+                title=chart_title,
+                lb=params_table_fe.min().min(),
+                ub=params_table_fe.max().max(),
+                format=".4f",
+                show_annot=True,
+                y_fontsize=heatmaps_y_fontsize,
+                x_fontsize=heatmaps_x_fontsize,
+                title_fontsize=heatmaps_title_fontsize,
+                annot_fontsize=heatmaps_annot_fontsize,
+            )
+            params_table_fe.to_csv(file_name + ".csv")
+            joint_teststats_fe.to_csv(file_name + "_joint_teststats" + ".csv")
+            df_aicc_fe.to_parquet(file_name + "_aiccsearch" + ".parquet")
+            df_aicc_fe.to_csv(file_name + "_aiccsearch" + ".csv", index=False)
+
+
+# %%
+# III --- Do everything
+# Some objects for quick ref later
+cols_endog_long = [
+    "hhdebt",  # _ngdp
+    "corpdebt",  # _ngdp
+    "govdebt",  # _ngdp
+    # "gdp",  # urate gdp
+    "corecpi",  # corecpi cpi
+    "reer",
+]
+cols_endog_short = [
+    # "hhdebt",  # _ngdp
+    # "corpdebt",  # _ngdp
+    # "govdebt",  # _ngdp
+    # "gdp",  # urate gdp
+    "corecpi",  # corecpi cpi
+    "reer",
+]
+cols_threshold_epu_hh_gov_ref = ["epu_ref", "hhdebt_ngdp_ref", "govdebt_ngdp_ref"]
+cols_threshold_epu_hh_gov = ["epu_ref", "hhdebt_ngdp", "govdebt_ngdp"]
+
+# STIR
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="",  # format: "abc_" or ""
+)
+# STIR (reduced)
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="reduced_",  # format: "abc_" or ""
+)
+
+# M2
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
+    file_suffixes="m2_",  # format: "abc_" or ""
+)
+# M2 (reduced)
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_short,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminm2"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
+    file_suffixes="m2_reduced_",  # format: "abc_" or ""
+)
+
+# LTIR
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["ltir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminltir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "chile",  #  2010Q1
+        "colombia",  # 2005 Q4
+        "germany",  # 2006 Q1
+    ],
+    file_suffixes="ltir_",  # format: "abc_" or ""
+)
+# LTIR (reduced)
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["ltir"] + cols_endog_short,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminltir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "chile",  #  2010Q1
+        "colombia",  # 2005 Q4
+        "germany",  # 2006 Q1
+    ],
+    file_suffixes="ltir_reduced_",  # format: "abc_" or ""
+)
+
+# One way STIR shocks
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxstir", "minstir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="",  # format: "abc_" or ""
+)
+# One way STIR shocks (reduced)
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxstir", "minstir"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    file_suffixes="reduced_",  # format: "abc_" or ""
+)
+
+# One way M2 shocks
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxm2", "minm2"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
+    file_suffixes="",  # format: "abc_" or ""
+)
+# One way M2 shocks (reduced)
+do_everything_octant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_short,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxm2", "minm2"],
+    list_uncertainty_variables=["maxminepu"],
+    cols_threshold=cols_threshold_epu_hh_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_epu_hh_gov,  # the ones without _ref
+    countries_drop=[
+        "india",  # 2012 Q1
+        "china",  # 2007 Q1 and potentially exclusive case
+        "chile",  # 2010 Q1 and potentially exclusive case
+        "colombia",  # 2005 Q4
+        "singapore",  # 2005 Q1
+    ],
+    file_suffixes="reduced_",  # format: "abc_" or ""
+)
+
+
+# %%
+# X --- Notify
+# End
+print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds -----")
+
+# %%
+
+"""
+2024-11-28 notes:
+- Grid search over 3 variables even at 5ppt, 1ppt, 1ppt intervals will take several hours with a 2022 i5 machine.
+- Need to consider writing a more efficient optimisation approach
+- Latin hypercube sampling is possible 
+- Only the main STIR analysis is completed
+"""
+
+
