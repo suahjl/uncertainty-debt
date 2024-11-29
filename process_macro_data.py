@@ -181,6 +181,8 @@ def wrangle_data(option: str, country_coverage="epu", maxminshocks_reflength=4):
             "yemen",
             "zambia",
         ]
+    elif country_coverage == "uct":
+        list_countries_keep = list(df["country"].unique())  # global variable
     df = df[df["country"].isin(list_countries_keep)].copy()
     df = df.reset_index(drop=True)
     # Relative to nominal GDP in USD
@@ -196,7 +198,7 @@ def wrangle_data(option: str, country_coverage="epu", maxminshocks_reflength=4):
     # Retain these columns as levels for reference later
     for col in ["privdebt", "govdebt", "hhdebt", "corpdebt"]:
         df[col + "_ngdp" + "_ref"] = df[col + "_ngdp"].copy()
-    for col in ["epu", "wui"]:  # uncertainty
+    for col in ["epu", "wui", "uct"]:  # uncertainty
         df[col + "_ref"] = df[col].copy()
     # YoY growth
     for col in [
@@ -219,6 +221,7 @@ def wrangle_data(option: str, country_coverage="epu", maxminshocks_reflength=4):
     cols_rates = ["urate", "policyrate", "stir", "ltir", "blr", "stgby"] + [
         "epu",
         "wui",
+        "uct",
     ]  # uncertainty
     if option == "yoy":
         for col in cols_rates + cols_stock_ngdp + cols_flow_ngdp:
@@ -282,7 +285,7 @@ def wrangle_data(option: str, country_coverage="epu", maxminshocks_reflength=4):
             del df[i]
 
     # Diff shocks
-    for col in ["epu", "wui", "stir", "ltir", "m2", "us_jln"]:  # uncertainty
+    for col in ["epu", "wui", "uct", "stir", "ltir", "m2", "us_jln"]:  # uncertainty
         hamilton_shock(col, option="diff", ref_period=maxminshocks_reflength)
         reverse_hamilton_shock(col, option="diff", ref_period=maxminshocks_reflength)
         twoway_hamilton_shock(col, option="diff", ref_period=maxminshocks_reflength)
@@ -314,6 +317,17 @@ df_large_yoy_maxminref6 = wrangle_data(
 df_large_yoy_ratesinlevels = wrangle_data(
     option="yoy_ratesinlevels", country_coverage="wui"
 )
+# Wrangle using UCT / global data coverage (no countries will be dropped here)
+df_full_yoy = wrangle_data(option="yoy", country_coverage="uct")
+df_full_yoy_maxminref8 = wrangle_data(
+    option="yoy", country_coverage="uct", maxminshocks_reflength=8
+)
+df_full_yoy_maxminref6 = wrangle_data(
+    option="yoy", country_coverage="uct", maxminshocks_reflength=6
+)
+df_full_yoy_ratesinlevels = wrangle_data(
+    option="yoy_ratesinlevels", country_coverage="uct"
+)
 # Save processed output
 df_yoy.to_parquet(path_data + "data_macro_yoy" + ".parquet")
 df_yoy_maxminref8.to_parquet(path_data + "data_macro_yoy_maxminref8" + ".parquet")
@@ -328,6 +342,16 @@ df_large_yoy_maxminref6.to_parquet(
 )
 df_large_yoy_ratesinlevels.to_parquet(
     path_data + "data_macro_large_yoy_ratesinlevels" + ".parquet"
+)
+df_full_yoy.to_parquet(path_data + "data_macro_full_yoy" + ".parquet")
+df_full_yoy_maxminref8.to_parquet(
+    path_data + "data_macro_full_yoy_maxminref8" + ".parquet"
+)
+df_full_yoy_maxminref6.to_parquet(
+    path_data + "data_macro_full_yoy_maxminref6" + ".parquet"
+)
+df_full_yoy_ratesinlevels.to_parquet(
+    path_data + "data_macro_full_yoy_ratesinlevels" + ".parquet"
 )
 
 # %%
