@@ -54,7 +54,7 @@ def compile_filenames_regex(pattern, file_path):
 def create_watermark(text, filename):
     """Create a single-page PDF with the watermark text."""
     c = canvas.Canvas(filename, pagesize=letter)
-    c.setFont("Helvetica", 8)  # font size
+    c.setFont("Helvetica", 9)  # font size
     c.setFillColorRGB(0, 0, 0, alpha=1)  # RGB, opacity
     c.drawString(10, 10, text)  # Adjust position (X, Y, text)
     c.save()
@@ -91,10 +91,12 @@ def watermark_pdf(input_pdf, output_pdf, watermarks):
 list_regex = [
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminwui_response[\w]+.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminuct_response[\w]+.png",
 ]
 list_pdfnames = [
     "quadrant_privdebt_panelthresholdlp_shockmaxminepu",
     "quadrant_privdebt_panelthresholdlp_shockmaxminwui",
+    "quadrant_privdebt_panelthresholdlp_shockmaxminuct",
 ]
 clear_directory(directory_to_clear=path_for_chartpack)
 for regex, pdfname in zip(list_regex, list_pdfnames):

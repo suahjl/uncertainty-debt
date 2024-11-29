@@ -48,6 +48,7 @@ def do_everything_quadrant_thresholdsearch_fe(
     threshold_variables: list[str],  # the ones without _ref
     countries_drop: list[str],
     file_suffixes: str,  # format: "abc_" or ""
+    input_df_suffix="yoy",
 ):
     # 0 --- The workhorse function
     def quadrant_thresholdsearch_fe(
@@ -290,7 +291,9 @@ def do_everything_quadrant_thresholdsearch_fe(
             print("\nMP variable is " + mp_variable)
             print("Uncertainty variable is " + uncertainty_variable)
             # II --- Load data
-            df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
+            df = pd.read_parquet(
+                path_data + "data_macro_" + input_df_suffix + ".parquet"
+            )
             # III --- Additional wrangling
             # Groupby ref
             cols_groups = ["country", "quarter"]
@@ -317,7 +320,7 @@ def do_everything_quadrant_thresholdsearch_fe(
             df["date"] = pd.to_datetime(df["quarter"]).dt.date
             df = df[(df["date"] >= t_start)]
             del df["date"]
-            # Drop NA
+            # Drop NA (also automatically clears countries with completely missing data columns)
             df = df.dropna(axis=0)
 
             # Reset index
@@ -489,168 +492,168 @@ do_everything_quadrant_thresholdsearch_fe(
     ],
     file_suffixes="",  # format: "abc_" or ""
 )
-# STIR (reduced)
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="reduced_",  # format: "abc_" or ""
-)
+# # STIR (reduced)
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="reduced_",  # format: "abc_" or ""
+# )
 
-# M2
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminm2"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2012 Q1
-        "china",  # 2007 Q1 and potentially exclusive case
-        "chile",  # 2010 Q1 and potentially exclusive case
-        "colombia",  # 2005 Q4
-        "singapore",  # 2005 Q1
-    ],
-    file_suffixes="m2_",  # format: "abc_" or ""
-)
-# M2 (reduced)
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminm2"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2012 Q1
-        "china",  # 2007 Q1 and potentially exclusive case
-        "chile",  # 2010 Q1 and potentially exclusive case
-        "colombia",  # 2005 Q4
-        "singapore",  # 2005 Q1
-    ],
-    file_suffixes="m2_reduced_",  # format: "abc_" or ""
-)
+# # M2
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_long,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminm2"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2012 Q1
+#         "china",  # 2007 Q1 and potentially exclusive case
+#         "chile",  # 2010 Q1 and potentially exclusive case
+#         "colombia",  # 2005 Q4
+#         "singapore",  # 2005 Q1
+#     ],
+#     file_suffixes="m2_",  # format: "abc_" or ""
+# )
+# # M2 (reduced)
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminm2"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2012 Q1
+#         "china",  # 2007 Q1 and potentially exclusive case
+#         "chile",  # 2010 Q1 and potentially exclusive case
+#         "colombia",  # 2005 Q4
+#         "singapore",  # 2005 Q1
+#     ],
+#     file_suffixes="m2_reduced_",  # format: "abc_" or ""
+# )
 
-# LTIR
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["ltir"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminltir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "chile",  #  2010Q1
-        "colombia",  # 2005 Q4
-        "germany",  # 2006 Q1
-    ],
-    file_suffixes="ltir_",  # format: "abc_" or ""
-)
-# LTIR (reduced)
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["ltir"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxminltir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "chile",  #  2010Q1
-        "colombia",  # 2005 Q4
-        "germany",  # 2006 Q1
-    ],
-    file_suffixes="ltir_reduced_",  # format: "abc_" or ""
-)
+# # LTIR
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["ltir"] + cols_endog_long,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminltir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "chile",  #  2010Q1
+#         "colombia",  # 2005 Q4
+#         "germany",  # 2006 Q1
+#     ],
+#     file_suffixes="ltir_",  # format: "abc_" or ""
+# )
+# # LTIR (reduced)
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["ltir"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxminltir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "chile",  #  2010Q1
+#         "colombia",  # 2005 Q4
+#         "germany",  # 2006 Q1
+#     ],
+#     file_suffixes="ltir_reduced_",  # format: "abc_" or ""
+# )
 
-# One way STIR shocks
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxstir", "minstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="",  # format: "abc_" or ""
-)
-# One way STIR shocks (reduced)
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxstir", "minstir"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2016 Q3
-        "denmark",  # ends 2019 Q3
-        "china",  # 2007 Q4 and potentially exclusive case
-        "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
-    ],
-    file_suffixes="reduced_",  # format: "abc_" or ""
-)
+# # One way STIR shocks
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_long,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxstir", "minstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="",  # format: "abc_" or ""
+# )
+# # One way STIR shocks (reduced)
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxstir", "minstir"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2016 Q3
+#         "denmark",  # ends 2019 Q3
+#         "china",  # 2007 Q4 and potentially exclusive case
+#         "colombia",  # 2006 Q4
+#         "germany",  # 2006 Q1
+#         "sweden",  # ends 2020 Q3 --- epu
+#     ],
+#     file_suffixes="reduced_",  # format: "abc_" or ""
+# )
 
-# One way M2 shocks
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_long,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxm2", "minm2"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2012 Q1
-        "china",  # 2007 Q1 and potentially exclusive case
-        "chile",  # 2010 Q1 and potentially exclusive case
-        "colombia",  # 2005 Q4
-        "singapore",  # 2005 Q1
-    ],
-    file_suffixes="",  # format: "abc_" or ""
-)
-# One way M2 shocks (reduced)
-do_everything_quadrant_thresholdsearch_fe(
-    cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_short,
-    cols_all_exog=["maxminbrent"],
-    list_mp_variables=["maxm2", "minm2"],
-    list_uncertainty_variables=["maxminepu"],
-    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
-    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
-    countries_drop=[
-        "india",  # 2012 Q1
-        "china",  # 2007 Q1 and potentially exclusive case
-        "chile",  # 2010 Q1 and potentially exclusive case
-        "colombia",  # 2005 Q4
-        "singapore",  # 2005 Q1
-    ],
-    file_suffixes="reduced_",  # format: "abc_" or ""
-)
+# # One way M2 shocks
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_long,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxm2", "minm2"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2012 Q1
+#         "china",  # 2007 Q1 and potentially exclusive case
+#         "chile",  # 2010 Q1 and potentially exclusive case
+#         "colombia",  # 2005 Q4
+#         "singapore",  # 2005 Q1
+#     ],
+#     file_suffixes="",  # format: "abc_" or ""
+# )
+# # One way M2 shocks (reduced)
+# do_everything_quadrant_thresholdsearch_fe(
+#     cols_endog_ex_shocks_and_gdp=["m2"] + cols_endog_short,
+#     cols_all_exog=["maxminbrent"],
+#     list_mp_variables=["maxm2", "minm2"],
+#     list_uncertainty_variables=["maxminepu"],
+#     cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+#     threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+#     countries_drop=[
+#         "india",  # 2012 Q1
+#         "china",  # 2007 Q1 and potentially exclusive case
+#         "chile",  # 2010 Q1 and potentially exclusive case
+#         "colombia",  # 2005 Q4
+#         "singapore",  # 2005 Q1
+#     ],
+#     file_suffixes="reduced_",  # format: "abc_" or ""
+# )
 
 # %%
 # III.B --- With WUI
@@ -677,11 +680,91 @@ do_everything_quadrant_thresholdsearch_fe(
         "sweden",
     ],
     file_suffixes="",  # format: "abc_" or ""
+    input_df_suffix="large_yoy"  # different data set
 )
+
+# %%
+# III.C --- With UCT
+# STIR
+do_everything_quadrant_thresholdsearch_fe(
+    cols_endog_ex_shocks_and_gdp=["stir"] + cols_endog_long,
+    cols_all_exog=["maxminbrent"],
+    list_mp_variables=["maxminstir"],
+    list_uncertainty_variables=["maxminuct"],
+    cols_threshold=cols_threshold_priv_gov_ref,  # the ones with _ref
+    threshold_variables=cols_threshold_priv_gov,  # the ones without _ref
+    countries_drop=[
+        "thailand",
+        "turkey",
+        "malaysia",
+        "israel",
+        "indonesia",
+        "india",
+        "germany",
+        "china",
+        "argentina",
+        "sweden",
+        "denmark",
+    ],
+    file_suffixes="",  # format: "abc_" or ""
+    input_df_suffix="full_yoy"  # different data set
+)
+
 
 # %%
 # X --- Notify
 # End
 print("\n----- Ran in " + "{:.0f}".format(time.time() - time_start) + " seconds -----")
+
+# %%
+
+
+# # %%
+# # TESTING
+# df = pd.read_parquet(path_data + "data_macro_full_yoy.parquet")
+# df = df[
+#     ["country", "quarter", "stir", "maxminbrent", "uct_ref", "maxminwui", "maxminstir"]
+#     + cols_endog_long
+# ]
+
+
+# def check_balance_timing(input):
+#     min_quarter_by_country = input.copy()
+#     min_quarter_by_country = min_quarter_by_country.dropna(axis=0)
+#     min_quarter_by_country = (
+#         min_quarter_by_country.groupby("country")["quarter"].min().reset_index()
+#     )
+#     print(tabulate(min_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+
+# def check_balance_endtiming(input):
+#     max_quarter_by_country = input.copy()
+#     max_quarter_by_country = max_quarter_by_country.dropna(axis=0)
+#     max_quarter_by_country = (
+#         max_quarter_by_country.groupby("country")["quarter"].max().reset_index()
+#     )
+#     print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
+
+
+# check_balance_timing(df)
+# check_balance_endtiming(df)
+# # %%
+# countries_drop = [
+#     "thailand",
+#     "turkey",
+#     "malaysia",
+#     "israel",
+#     "indonesia",
+#     "india",
+#     "germany",
+#     "china",
+#     "argentina",
+#     "sweden",
+#     "denmark"
+# ]
+
+# df = df[~df["country"].isin(countries_drop)].copy()
+# check_balance_timing(df)
+# check_balance_endtiming(df)
 
 # %%
