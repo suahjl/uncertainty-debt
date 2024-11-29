@@ -155,6 +155,32 @@ def process_wui(df):
     # output 
     return df
 
+def process_uct(df):
+    """
+    ---Note---
+    Treated the same way as global ceic variables
+    """
+
+    # prelims
+    cols_base = ["date", "UCT"]
+    df = df[cols_base]
+    df.columns = ["date", "uct"]  # fixed format on https://www.policyuncertainty.com/media/UCT.csv
+    
+    # deal with date
+    df["date"] = df["date"].str.replace("m", "-")
+    df["quarter"] = pd.to_datetime(df["date"].astype("str")).dt.to_period("Q")
+    del df["date"]
+
+    # labels
+    df["uct"] = df["uct"].astype("float")
+    df = df.groupby(["quarter"])["uct"].mean().reset_index(drop=False)
+
+    # reset indices
+    df = df.reset_index(drop=True)
+
+    # output
+    return df
+
 
 # %%
 # II --- Load data from CEIC + process other data sources + merge for processing
@@ -214,6 +240,10 @@ if not manual_data and not use_frozen_processed_data:
         df_fred = process_fred_df(df=df_fred, col_label=col)
         df_fred = df_fred[["quarter", col]].copy()
         df = df.merge(df_fred, on="quarter", how="outer")
+    # Load UCT index (as if global)
+    df_uct = pd.read_csv(path_data + "uschinatensions/UCT.csv")
+    df_uct = process_uct(df=df_uct)
+    df = df.merge(df_uct, on="quarter", how="outer")
     # Load WUI
     df_wui = pd.read_excel(
         path_data + "wui_manual_download/WUI_Data.xlsx", sheet_name="T6"
@@ -260,6 +290,10 @@ elif manual_data and not use_frozen_processed_data:
         df_fred = process_fred_df(df=df_fred, col_label=col)
         df_fred = df_fred[["quarter", col]].copy()
         df = df.merge(df_fred, on="quarter", how="outer")
+    # Load UCT index (as if global)
+    df_uct = pd.read_csv(path_data + "uschinatensions/UCT.csv")
+    df_uct = process_uct(df=df_uct)
+    df = df.merge(df_uct, on="quarter", how="outer")
     # Load WUI
     df_wui = pd.read_excel(
         path_data + "wui_manual_download/WUI_Data.xlsx", sheet_name="T6"
@@ -281,6 +315,10 @@ elif manual_data and use_frozen_processed_data:
     df_wui = process_wui(df=df_wui)
     df_wui["quarter"] = df_wui["quarter"].astype("str")
     df = df.merge(df_wui, on=["country", "quarter"], how="left")
+    # Load UCT index (as if global)
+    df_uct = pd.read_csv(path_data + "uschinatensions/UCT.csv")
+    df_uct = process_uct(df=df_uct)
+    df = df.merge(df_uct, on="quarter", how="outer")
     # Sort
     df = df.sort_values(by=["country", "quarter"], ascending=[True, True])
     # Reset index
