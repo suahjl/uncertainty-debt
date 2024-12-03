@@ -45,10 +45,6 @@ def check_balance_endtiming(input):
 def wrangle_data():
     # prelims
     df = pd.read_parquet(path_data + "data_micro_raw.parquet")
-    # convert ratios to percentages
-    cols_perc = ["debtebitda", "debttangibleequity"]
-    for col in cols_perc:
-        df[col] = 100 * df[col]
     # drop entity name for space
     del df["entity"]
     # convert public private to dummy
@@ -56,37 +52,44 @@ def wrangle_data():
     df.loc[df["public"] == "Public Company", "public"] = 1
     df.loc[df["public"] == "Private Company", "public"] = 0
     # interpolate
-    df = df.groupby("id").apply(lambda group: group.interpolate(method="linear"))
+    df = df.groupby("id").apply(
+        lambda group: group.interpolate(method="linear")
+    )  # this thing takes forever (consider vectorising)
     del df["id"]
     df = df.reset_index()
     del df["level_1"]
     # somehow some values are on different rows for the same i and t
-    cols_identifiers = ["id", "cc", "year", "public"]
+    cols_identifiers = ["id", "country", "year", "public"]
     cols_value = [i for i in df.columns if i not in cols_identifiers]
     df = df.groupby(cols_identifiers)[cols_value].mean().reset_index(drop=False)
+    # from accounting to econs 
+    df["capex"] = -1 * df["capex"]
     # create new variables
     df["debtrevenue"] = 100 * (df["debt"] / df["revenue"])
+    df["debtebitda"] = 100 * (df["debt"] / df["ebitda"])
+    df["debtcapex"] = 100 * (df["debt"] / df["capex"])
     # keep some as levels
-    cols_unchanged = ["debtebitda", "debttangibleequity", "debtrevenue"]
+    cols_unchanged = ["debtebitda", "debtrevenue", "debtcapex"]
     for col in cols_unchanged:
         df[col + "_ref"] = df[col].copy()
     # convert to YoY
-    cols_yoy = ["debt", "revenue"]
+    cols_yoy = ["debt", "ebitda", "revenue", "capex"]
     for col in cols_yoy:
-        df[col] = 100 * ((df[col] / df[col].shift(1)) - 1) 
-    cols_yoy_diff = ["debtebitda", "debttangibleequity", "debtrevenue"]
+        df[col] = 100 * ((df[col] / df[col].shift(1)) - 1)
+    cols_yoy_diff = ["debtebitda", "debtrevenue", "debtcapex"]
     for col in cols_yoy_diff:
         df[col] = df[col] - df[col].shift(1)
     # output
     return df
 
+
 # %%
 # II --- Wrangle data
 df = wrangle_data()
 
-# %% 
+# %%
 # III --- Export
-df.to_parquet(path_data + "data_micro_yoy.parquet", compression="brotli")
+df.to_parquet(path_data + "data_micro_yoy.parquet")  # , compression="brotli")
 
 # %%
 # X --- Notify

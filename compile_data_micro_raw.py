@@ -31,16 +31,16 @@ def process_spg_and_concat():
         df = pd.read_excel(xlsx_filepath, sheet_name="Sheet1")
         # ensure that we only have entity, entity id, country code and company type
         df.columns = list(df.iloc[3, :])
-        if "SP_GEOGRAPHY" in df.columns:
-            del df["SP_GEOGRAPHY"]
+        # if "SP_GEOGRAPHY" in df.columns:
+        #     del df["SP_GEOGRAPHY"]
         # column names
         df.columns = list(df.iloc[3, 0:4]) + list(df.iloc[4, 4:])
         df = df.iloc[6:, :]
         # convert into panel
         df = pd.wide_to_long(
             df=df,
-            stubnames="FY",
-            i=["SP_ENTITY_NAME", "SP_ENTITY_ID", "SP_COUNTRY_CODE", "SP_COMPANY_TYPE"],
+            stubnames="CY",  # calendar year
+            i=["SP_ENTITY_NAME", "SP_ENTITY_ID", "SP_COUNTRY_NAME", "SP_COMPANY_TYPE"],
             j="year",
         )
         df = df.reset_index()
@@ -52,13 +52,13 @@ def process_spg_and_concat():
             columns={
                 "SP_ENTITY_NAME": "entity",
                 "SP_ENTITY_ID": "id",
-                "SP_COUNTRY_CODE": "cc",
+                "SP_COUNTRY_NAME": "country",
                 "SP_COMPANY_TYPE": "type",
-                "FY": col_name,
+                "CY": col_name,
             }
         )
         # merge / concat
-        cols_identifiers = ["entity", "id", "cc", "type", "year"]
+        cols_identifiers = ["entity", "id", "country", "type", "year"]
         if count_df == 0:
             df_full = df.copy()
         elif count_df > 0:
@@ -69,6 +69,10 @@ def process_spg_and_concat():
             else:
                 df_full = df_full.merge(df, how="outer", on=cols_identifiers)
         count_df += 1
+    # snake case country labels
+    df_full["country"] = (
+        df_full["country"].str.replace(r"[^A-Za-z0-9]+", "_", regex=True).str.lower()
+    )
     # output
     return df_full
 
@@ -79,17 +83,24 @@ df = process_spg_and_concat()
 dict_dtypes = {
     "entity": "str",
     "id": "str",
-    "cc": "str",
+    "country": "str",
     "type": "str",
     "year": "int",
     "debt": "float",
-    "debtebitda": "float",
-    "debttangibleequity": "float",
     "revenue": "float",
+    "ebitda": "float",
+    "capex": "float",
 }
 df = df.replace("NM", np.nan)
 df = df.astype(dict_dtypes)
-df.to_parquet(path_data + "data_micro_raw.parquet", compression="brotli")
+dict_country_names = {
+    "hong_kong": "hong_kong_sar_china_",
+    "usa": "united_states",
+    "russia": "russian_federation",
+}
+df["country"] = df["country"].replace(dict_country_names)
+df = df.reset_index(drop=True)
+df.to_parquet(path_data + "data_micro_raw.parquet")  # , compression="brotli")
 
 # %%
 # X --- Notify

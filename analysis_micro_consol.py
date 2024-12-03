@@ -53,6 +53,7 @@ def do_everything(
     threshold_range_skip: float,
     col_x_reg_interacted_with_threshold: list[str],
     shocks_to_plot: list[str],
+    lp_horizon: int,
     file_suffixes: str,
     input_df_suffix: str,
 ):
@@ -70,11 +71,14 @@ def do_everything(
     # Load micro data
     df = pd.read_parquet(path_data + "data_micro_" + input_df_suffix + ".parquet")
     # Testing with US
-    df = df[df["cc"] == "US"]
+    # df = df[df["country"] == "united_states"]
     # Creditor firms?
-    # df = df[df["debt"] >= 0]
-    # Dumpster fires?
-    # df = df[df["debt"] <= 300]
+    # df = df[df["debtebitda_ref"] >= 0]
+    # Drop extreme values
+    df = df[
+        (df[cols_threshold[0]] >= df[cols_threshold[0]].quantile(0.005))
+        & (df[cols_threshold[0]] <= df[cols_threshold[0]].quantile(0.995))
+    ]
     # Trim columns
     df = df[
         [col_entity]
@@ -95,15 +99,12 @@ def do_everything(
     print(
         "Firm-level dataframe has "
         + str(len(micro_id_minyear))
-        + " firms with " + col_time + " coverage longer than "
+        + " firms with "
+        + col_time
+        + " coverage longer than "
         + str(cut_off_start_year)
     )
     df = df[df["id"].isin(micro_id_minyear)]
-    # Change country codes
-    with open("dict_country.txt", "r") as file:
-        file_content = file.read()
-    dict_cc_country = ast.literal_eval(file_content)
-    df[col_country_micro] = df[col_country_micro].replace(dict_cc_country)
 
     # B --- Load + prep macro
     # Load macro data for exog block
@@ -138,9 +139,12 @@ def do_everything(
     # Keep country level data as endog
     df_macro_country = df_macro[[col_country_macro] + [col_time] + cols_endog_macro]
     # Merge
-    df_macro_country = df_macro_country.rename(
-        columns={col_country_macro: col_country_micro}
-    )
+    if col_country_macro == col_country_micro:
+        pass
+    else:
+        df_macro_country = df_macro_country.rename(
+            columns={col_country_macro: col_country_micro}
+        )
     df = df.merge(
         df_macro_country, on=[col_country_micro, col_time], how="left"
     )  # use left
@@ -270,7 +274,12 @@ def do_everything(
             cols_threshold[0] + "_threshold",
         ].reset_index(drop=True)[0]
         print(df_aicc)
-        print("Optimal threshold for " + cols_threshold[0] + " is " + str(threshold_optimal))
+        print(
+            "Optimal threshold for "
+            + cols_threshold[0]
+            + " is "
+            + str(threshold_optimal)
+        )
         # create threshold variable
         df.loc[df[cols_threshold[0]] >= threshold_optimal, "threshold_on"] = 1
         df.loc[df[cols_threshold[0]] < threshold_optimal, "threshold_on"] = 0
@@ -285,7 +294,7 @@ def do_everything(
         X=cols_exog_macro,
         threshold_var="threshold_on",
         response=cols_endog_ordered,
-        horizon=3,
+        horizon=lp_horizon,
         lags=1,
         varcov="robust",
         ci_width=0.8,
@@ -334,30 +343,31 @@ def do_everything(
 # %%
 # II --- Set up
 col_entity = "id"
-col_country_micro = "cc"
+col_country_micro = "country"
 col_country_macro = "country"
-cols_endog_micro = ["debt", "revenue"]
-cols_endog_macro = ["maxminepu", "maxminstir", "stir", "gdp", "corecpi", "reer"]
+cols_endog_micro = ["debt", "capex", "revenue"]
+cols_endog_macro = ["maxminepu", "maxminstir", "stir", "gdp", "corecpi"]
 cols_endog_ordered = [
     "maxminepu",
     "maxminstir",
     "stir",
     "gdp",
     "corecpi",
-    "reer",
     "debt",
+    "capex",
     "revenue",
 ]
 cols_exog_macro = ["maxminbrent"]
 cols_threshold = [
-    "debtrevenue_ref"
+    "debtebitda_ref"
 ]  # can only handle 1 for now (no reason to handle more)
 shocks_to_plot = ["maxminepu", "maxminstir"]  # uncertainty, mp
+lp_horizon = 5
 cut_off_start_year = 2000
 cut_off_end_year = 2023
 threshold_option = "pols_minaicc"
-col_y_reg_threshold_selection = "revenue"
-threshold_ranges = [0, 300]
+col_y_reg_threshold_selection = "capex"
+threshold_ranges = [0, 750]
 threshold_range_skip = 5
 col_x_reg_interacted_with_threshold = ["maxminepu"]
 
@@ -380,6 +390,7 @@ do_everything(
     threshold_range_skip=threshold_range_skip,
     col_x_reg_interacted_with_threshold=col_x_reg_interacted_with_threshold,
     shocks_to_plot=shocks_to_plot,
+    lp_horizon=lp_horizon,
     file_suffixes="",  # "abc_" or ""
     input_df_suffix="yoy",
 )
