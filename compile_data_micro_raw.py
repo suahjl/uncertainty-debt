@@ -15,7 +15,7 @@ time_start = time.time()
 # %%
 # I --- Preliminaries
 path_data = "./data/"
-path_spg = path_data + "spg_manual_download/"
+path_spg = path_data + "spg_manual_download/annual/"
 path_output = "./output/"
 
 

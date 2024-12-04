@@ -399,7 +399,7 @@ def fe_reg(
     # Estimate model
     mod = PanelOLS.from_formula(formula=eqn, data=d, drop_absorbed=True)
     res = mod.fit(cov_type=cov_choice)
-    print(res.summary)
+    # print(res.summary)
 
     # Return estimated parameters
     params_table = pd.concat([res.params, res.std_errors, res.pvalues], axis=1)

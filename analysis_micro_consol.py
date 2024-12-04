@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import date, timedelta
 import re
-from helper import telsendmsg, telsendimg, telsendfiles, fe_reg
+from helper import telsendmsg, telsendimg, telsendfiles, fe_reg, lineplot
 import localprojections as lp
 from tqdm import tqdm
 import time
@@ -56,6 +56,8 @@ def do_everything(
     lp_horizon: int,
     file_suffixes: str,
     input_df_suffix: str,
+    countries_drop: list[str] = None,
+    trim_extreme_ends_perc: float = None,
 ):
     # A --- Load + prep micro
     # Print key input and output attributes
@@ -75,10 +77,19 @@ def do_everything(
     # Creditor firms?
     # df = df[df["debtebitda_ref"] >= 0]
     # Drop extreme values
-    df = df[
-        (df[cols_threshold[0]] >= df[cols_threshold[0]].quantile(0.005))
-        & (df[cols_threshold[0]] <= df[cols_threshold[0]].quantile(0.995))
-    ]
+    if (trim_extreme_ends_perc is not None) and (trim_extreme_ends_perc > 0):
+        df = df[
+            (
+                df[cols_threshold[0]]
+                >= df[cols_threshold[0]].quantile(trim_extreme_ends_perc / 2)
+            )
+            & (
+                df[cols_threshold[0]]
+                <= df[cols_threshold[0]].quantile(1 - (trim_extreme_ends_perc / 2))
+            )
+        ]
+    elif trim_extreme_ends_perc is None:
+        pass
     # Trim columns
     df = df[
         [col_entity]
@@ -150,6 +161,11 @@ def do_everything(
     )  # use left
 
     # E --- Clean up consolidated dataset
+    # Drop countries
+    if countries_drop is None:
+        pass
+    elif countries_drop is not None:
+        df = df[~df["country"].isin(countries_drop)].copy()
     # Sort
     df = df.sort_values(by=["id", col_time], ascending=[True, True])
     df = df.reset_index(drop=True)
@@ -268,6 +284,30 @@ def do_everything(
             )
         elif os.path.isfile(aicc_file_name):
             df_aicc = pd.read_csv(aicc_file_name)
+        # plot AICc path
+        fig = lineplot(
+            data=df_aicc,
+            y_cols=["aicc"],
+            y_cols_nice=["AICc"],
+            x_col=df_aicc.columns[0],
+            x_col_nice="Threshold",
+            line_colours=["black"],
+            line_widths=[3],
+            line_dashes=["solid"],
+            main_title="Grid search of optimal threshold by AICc-minimisation",
+            font_size=24,
+            show_legend=False,
+        )
+        fig.write_image(
+            path_output
+            + "micro_thresholdselection_aicc_"
+            + "modwith_"
+            + cols_endog_ordered[0]
+            + "_"
+            + cols_endog_ordered[1]
+            + file_suffixes
+            + ".png"
+        )
         # find optimal threshold
         threshold_optimal = df_aicc.loc[
             df_aicc["aicc"] == df_aicc["aicc"].min(),
@@ -345,7 +385,11 @@ def do_everything(
 col_entity = "id"
 col_country_micro = "country"
 col_country_macro = "country"
-cols_endog_micro = ["debt", "capex", "revenue"]
+cols_endog_micro = [
+    "debt",
+    "capex",
+    "revenue"
+]
 cols_endog_macro = ["maxminepu", "maxminstir", "stir", "gdp", "corecpi"]
 cols_endog_ordered = [
     "maxminepu",
@@ -370,6 +414,7 @@ col_y_reg_threshold_selection = "capex"
 threshold_ranges = [0, 750]
 threshold_range_skip = 5
 col_x_reg_interacted_with_threshold = ["maxminepu"]
+trim_extreme_ends_perc = 0.05  # 0.01
 
 # %%
 # II.A --- Base analysis
@@ -393,6 +438,15 @@ do_everything(
     lp_horizon=lp_horizon,
     file_suffixes="",  # "abc_" or ""
     input_df_suffix="yoy",
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        "colombia",  # 2006 Q4
+        "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+    ],
+    trim_extreme_ends_perc=trim_extreme_ends_perc,
 )
 
 # %%
