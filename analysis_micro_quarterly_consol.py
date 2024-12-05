@@ -37,8 +37,8 @@ warnings.filterwarnings(
 # %%
 # I --- Functions
 def do_everything(
-    cut_off_start_year: int,
-    cut_off_end_year: int,
+    cut_off_start_quarter: int,
+    cut_off_end_quarter: int,
     col_entity: str,
     col_country_micro: str,
     col_country_macro: str,
@@ -69,9 +69,13 @@ def do_everything(
         + file_suffixes
     )
     # Prelims
-    col_time = "year"
+    col_time = "quarter"
     # Load micro data
-    df = pd.read_parquet(path_data + "data_micro_" + input_df_suffix + ".parquet")
+    df = pd.read_parquet(
+        path_data + "data_micro_quarterly_" + input_df_suffix + ".parquet"
+    )
+    # PeriodQ
+    df["quarter"] = pd.to_datetime(df["quarter"]).dt.to_period("Q")
     # Testing with US
     # df = df[df["country"] == "united_states"]
     # Creditor firms?
@@ -105,7 +109,7 @@ def do_everything(
             "_extreme",
         ] = 0
         df_extreme = df.groupby(col_entity)["_extreme"].max().reset_index()
-        print(str(len(df_extreme)) + " firms with extreme values") 
+        print(str(len(df_extreme)) + " firms with extreme values")
         del df["_extreme"]
         df = df.merge(df_extreme, on=col_entity, how="left")
         df = df[df["_extreme"] == 0].copy()
@@ -119,38 +123,38 @@ def do_everything(
         + cols_endog_micro
         + cols_threshold
     ]
+    print(df)
     # Drop NA
     df = df.dropna()
     # Drop entities with insufficient data points
-    micro_id_minyear = df.groupby(col_entity)[col_time].min().reset_index()
-    micro_id_minyear.loc[micro_id_minyear[col_time] <= cut_off_start_year, "keep"] = (
-        True
-    )
-    micro_id_minyear = micro_id_minyear[micro_id_minyear["keep"] == True]
-    micro_id_minyear = list(micro_id_minyear[col_entity])
+    micro_id_minquarter = df.groupby(col_entity)[col_time].first().reset_index()
+    micro_id_minquarter.loc[
+        micro_id_minquarter[col_time] <= cut_off_start_quarter, "keep"
+    ] = 1
+    micro_id_minquarter = micro_id_minquarter[micro_id_minquarter["keep"] == 1]
+    micro_id_minquarter = list(micro_id_minquarter[col_entity])
     print(
         "Firm-level dataframe has "
-        + str(len(micro_id_minyear))
+        + str(len(micro_id_minquarter))
         + " firms with "
         + col_time
         + " coverage longer than "
-        + str(cut_off_start_year)
+        + str(cut_off_start_quarter)
     )
-    df = df[df[col_entity].isin(micro_id_minyear)]
+    df = df[df[col_entity].isin(micro_id_minquarter)]
 
     # B --- Load + prep macro
     # Load macro data for exog block
     df_macro = pd.read_parquet(path_data + "data_macro_yoy.parquet")
-    # Convert macro data into annual freq
-    df_macro = df_macro.rename(columns={"quarter": col_time})
-    df_macro[col_time] = pd.to_datetime(
-        df_macro[col_time].astype("str")
-    ).dt.year  # fixed to year
+    # Convert to periodQ
+    df_macro[col_time] = pd.to_datetime(df_macro[col_time].astype("str")).dt.to_period(
+        "Q"
+    )  # fixed to quarter
     df_macro = df_macro.groupby([col_country_macro, col_time]).mean().reset_index()
     # Trim dates for harmonisation
     df_macro = df_macro[
-        (df_macro[col_time] >= cut_off_start_year)
-        & (df_macro[col_time] <= cut_off_end_year)
+        (df_macro[col_time] >= cut_off_start_quarter)
+        & (df_macro[col_time] <= cut_off_end_quarter)
     ]
 
     # C --- Deal with global variables
@@ -198,6 +202,9 @@ def do_everything(
     # Drop NA again (end points)
     df = df.dropna()
     n_analysis = len(df[col_entity].unique())
+    # Turn t into numeric
+    df[col_time] = df.groupby(col_entity).cumcount()
+    # Print N
     print("Final dataframe has " + str(n_analysis) + " firms")
 
     # F --- Deal with threshold variable
@@ -212,7 +219,7 @@ def do_everything(
     elif threshold_option == "pols_minaicc":
         aicc_file_name = (
             path_output
-            + "micro_thresholdselection_"
+            + "micro_quarterly_thresholdselection_"
             + "modwith_"
             + cols_endog_ordered[0]
             + "_"
@@ -321,7 +328,7 @@ def do_everything(
         )
         fig.write_image(
             path_output
-            + "micro_thresholdselection_aicc_"
+            + "micro_quarterly_thresholdselection_aicc_"
             + "modwith_"
             + cols_endog_ordered[0]
             + "_"
@@ -385,7 +392,7 @@ def do_everything(
             )
             fig.write_image(
                 path_output
-                + "micro_panelthresholdlp_"
+                + "micro_quarterly_panelthresholdlp_"
                 + file_suffixes
                 + "modwith_"
                 + cols_endog_ordered[0]
@@ -411,7 +418,13 @@ cols_endog_micro = [
     "capex",
     # "revenue"
 ]
-cols_endog_macro = ["maxminepu", "maxminstir", "stir", "gdp", "corecpi"]
+cols_endog_macro = [
+    "maxminepu",
+    "maxminstir",
+    "stir",
+    "gdp",
+    "corecpi"
+]
 cols_endog_ordered = [
     "maxminepu",
     "maxminstir",
@@ -427,21 +440,21 @@ cols_threshold = [
     "debtrevenue_ref"
 ]  # can only handle 1 for now (no reason to handle more)
 shocks_to_plot = ["maxminepu", "maxminstir"]  # uncertainty, mp
-lp_horizon = 5
-cut_off_start_year = 2000
-cut_off_end_year = 2023
+lp_horizon = 12
+cut_off_start_quarter = "2011Q1"
+cut_off_end_quarter = "2024Q3"
 threshold_option = "pols_minaicc"
 col_y_reg_threshold_selection = "capex"
-threshold_ranges = [0, 150]
+threshold_ranges = [30, 80]
 threshold_range_skip = 5
 col_x_reg_interacted_with_threshold = ["maxminepu"]
-trim_extreme_ends_perc = 0.01  # 0.01
+trim_extreme_ends_perc = None  # 0.01  0.05  0.1
 
 # %%
 # II.A --- Base analysis
 do_everything(
-    cut_off_start_year=cut_off_start_year,
-    cut_off_end_year=cut_off_end_year,
+    cut_off_start_quarter=cut_off_start_quarter,
+    cut_off_end_quarter=cut_off_end_quarter,
     col_entity=col_entity,
     col_country_micro=col_country_micro,
     col_country_macro=col_country_macro,
