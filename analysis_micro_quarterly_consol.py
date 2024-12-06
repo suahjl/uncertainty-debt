@@ -80,6 +80,14 @@ def do_everything(
     # df = df[df["country"] == "united_states"]
     # Creditor firms?
     # df = df[df["debtebitda_ref"] >= 0]
+    # Keep operating firms
+    print(
+        str(len(df["id"].unique()))
+        + " firms; "
+        + str(len(df.loc[df["operating"] == 1, "id"].unique()))
+        + " still operating"
+    )
+    df = df[df["operating"] == 1].copy()
     # Drop extreme values
     if (trim_extreme_ends_perc is not None) and (trim_extreme_ends_perc > 0):
         df.loc[
@@ -109,7 +117,10 @@ def do_everything(
             "_extreme",
         ] = 0
         df_extreme = df.groupby(col_entity)["_extreme"].max().reset_index()
-        print(str(len(df_extreme)) + " firms with extreme values")
+        print(
+            str(len(df_extreme[df_extreme["_extreme"] == 1]))
+            + " firms with extreme values"
+        )
         del df["_extreme"]
         df = df.merge(df_extreme, on=col_entity, how="left")
         df = df[df["_extreme"] == 0].copy()
@@ -198,7 +209,9 @@ def do_everything(
     df = df.replace(np.inf, np.nan)
     df = df.replace(-np.inf, np.nan)
     for col in cols_endog_micro + cols_threshold:
-        df[col] = df.groupby(col_entity)[col].fillna(method="ffill").reset_index(drop=True)
+        df[col] = (
+            df.groupby(col_entity)[col].fillna(method="ffill").reset_index(drop=True)
+        )
     # Drop NA again (end points)
     df = df.dropna()
     n_analysis = len(df[col_entity].unique())
@@ -216,6 +229,15 @@ def do_everything(
         df.loc[
             df[cols_threshold[0]] < df[cols_threshold[0]].quantile(0.75), "threshold_on"
         ] = 0
+        print("75p threshold: " + str(df[cols_threshold[0]].quantile(0.75)))
+    elif threshold_option == "manual":
+        manual_threshold_value = 55
+        df.loc[
+            df[cols_threshold[0]] >= manual_threshold_value,
+            "threshold_on",
+        ] = 1
+        df.loc[df[cols_threshold[0]] < manual_threshold_value, "threshold_on"] = 0
+        print("Manual threshold: " + str(manual_threshold_value))
     elif threshold_option == "pols_minaicc":
         aicc_file_name = (
             path_output
@@ -418,13 +440,7 @@ cols_endog_micro = [
     "capex",
     # "revenue"
 ]
-cols_endog_macro = [
-    "maxminepu",
-    "maxminstir",
-    "stir",
-    "gdp",
-    "corecpi"
-]
+cols_endog_macro = ["maxminepu", "maxminstir", "stir", "gdp", "corecpi"]
 cols_endog_ordered = [
     "maxminepu",
     "maxminstir",
@@ -440,12 +456,12 @@ cols_threshold = [
     "debtrevenue_ref"
 ]  # can only handle 1 for now (no reason to handle more)
 shocks_to_plot = ["maxminepu", "maxminstir"]  # uncertainty, mp
-lp_horizon = 12
-cut_off_start_quarter = "2011Q1"
-cut_off_end_quarter = "2024Q3"
-threshold_option = "pols_minaicc"
+lp_horizon = 8
+cut_off_start_quarter = "2007Q1"  # "2007Q1"
+cut_off_end_quarter = "2024Q1"
+threshold_option = "pols_minaicc"  # "pols_minaicc"  "manual"  p75
 col_y_reg_threshold_selection = "capex"
-threshold_ranges = [30, 80]
+threshold_ranges = [0, 155]
 threshold_range_skip = 5
 col_x_reg_interacted_with_threshold = ["maxminepu"]
 trim_extreme_ends_perc = None  # 0.01  0.05  0.1
@@ -477,8 +493,8 @@ do_everything(
         "denmark",  # ends 2019 Q3
         "china",  # 2007 Q4 and potentially exclusive case
         "colombia",  # 2006 Q4
-        "germany",  # 2006 Q1
-        "sweden",  # ends 2020 Q3 --- epu
+        # "germany",  # 2006 Q1
+        # "sweden",  # ends 2020 Q3 --- epu
         "nigeria",
     ],
     trim_extreme_ends_perc=trim_extreme_ends_perc,

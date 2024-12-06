@@ -51,23 +51,39 @@ def wrangle_data():
     df = df.rename(columns={"type": "public"})
     df.loc[df["public"] == "Public Company", "public"] = 1
     df.loc[df["public"] == "Private Company", "public"] = 0
+    # convert status to dummy
+    df = df.rename(columns={"status": "operating"})
+    df.loc[
+        (
+            (df["operating"] == "Operating Subsidiary")
+            | (df["operating"] == "Operating")
+        ),
+        "operating",
+    ] = 1
+    df.loc[
+        ~(df["operating"] == 1),
+        "operating",
+    ] = 0
     # interpolate
-    df = df.groupby("id").apply(
-        lambda group: group.interpolate(method="linear")
-    )  # this thing takes forever (consider vectorising)
-    del df["id"]
-    df = df.reset_index()
-    del df["level_1"]
+    # df = df.groupby("id").apply(lambda group: group.interpolate(method="linear"))  # this thing takes forever (consider vectorising)
+    cols_identifiers = ["id", "country", "quarter", "public", "operating"]
+    for col in [i for i in df.columns if i not in cols_identifiers]:
+        df[col] = df.groupby("id")[col].transform(lambda group: group.interpolate(method="linear"))
+    df = df.reset_index(drop=True)
+    # del df["level_1"]
     # somehow some values are on different rows for the same i and t
-    cols_identifiers = ["id", "country", "quarter", "public"]
     cols_value = [i for i in df.columns if i not in cols_identifiers]
     df = df.groupby(cols_identifiers)[cols_value].mean().reset_index(drop=False)
     # from accounting to econs
     df["capex"] = -1 * df["capex"]
     # create new variables
-    df["debtrevenue"] = 100 * (df["debt"] / df.groupby("id")["revenue"].rolling(4).sum().reset_index(drop=True))
+    df["debtrevenue"] = 100 * (
+        df["debt"] / df.groupby("id")["revenue"].rolling(4).sum().reset_index(drop=True)
+    )
     # df["debtebitda"] = 100 * (df["debt"] / df["ebitda"])
-    df["debtcapex"] = 100 * (df["debt"] / df.groupby("id")["capex"].rolling(4).sum().reset_index(drop=True))
+    df["debtcapex"] = 100 * (
+        df["debt"] / df.groupby("id")["capex"].rolling(4).sum().reset_index(drop=True)
+    )
     # keep some as levels
     cols_unchanged = [
         # "debtebitda",

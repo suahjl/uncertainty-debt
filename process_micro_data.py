@@ -51,15 +51,27 @@ def wrangle_data():
     df = df.rename(columns={"type": "public"})
     df.loc[df["public"] == "Public Company", "public"] = 1
     df.loc[df["public"] == "Private Company", "public"] = 0
+    # convert status to dummy
+    df = df.rename(columns={"status": "operating"})
+    df.loc[
+        (
+            (df["operating"] == "Operating Subsidiary")
+            | (df["operating"] == "Operating")
+        ),
+        "operating",
+    ] = 1
+    df.loc[
+        ~(df["operating"] == 1),
+        "operating",
+    ] = 0
     # interpolate
-    df = df.groupby("id").apply(
-        lambda group: group.interpolate(method="linear")
-    )  # this thing takes forever (consider vectorising)
-    del df["id"]
-    df = df.reset_index()
-    del df["level_1"]
+    # df = df.groupby("id").apply(lambda group: group.interpolate(method="linear"))  # this thing takes forever (consider vectorising)
+    cols_identifiers = ["id", "country", "year", "public", "operating"]
+    for col in [i for i in df.columns if i not in cols_identifiers]:
+        df[col] = df.groupby("id")[col].transform(lambda group: group.interpolate(method="linear"))
+    df = df.reset_index(drop=True)
+    # del df["level_1"]
     # somehow some values are on different rows for the same i and t
-    cols_identifiers = ["id", "country", "year", "public"]
     cols_value = [i for i in df.columns if i not in cols_identifiers]
     df = df.groupby(cols_identifiers)[cols_value].mean().reset_index(drop=False)
     # from accounting to econs 

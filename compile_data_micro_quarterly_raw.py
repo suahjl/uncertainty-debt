@@ -85,6 +85,23 @@ def process_spg_and_concat():
     df_full["country"] = (
         df_full["country"].str.replace(r"[^A-Za-z0-9]+", "_", regex=True).str.lower()
     )
+    # company status
+    df_status = pd.read_excel(
+        path_data + "spg_manual_download/epucoveragepublic_status.xlsx"
+    )
+    df_status.columns = list(df_status.iloc[3, 0:5])
+    df_status = df_status.iloc[6:, :]
+    df_status = df_status.rename(
+        columns={
+            "SP_ENTITY_NAME": "entity",
+            "SP_ENTITY_ID": "id",
+            "SP_COUNTRY_NAME": "country",
+            "SP_COMPANY_TYPE": "type",
+            "SP_COMPANY_STATUS": "status",
+        }
+    )
+    df_status = df_status[["id", "status"]]
+    df_full = df_full.merge(df_status, how="left", on="id")
     # output
     return df_full
 
@@ -97,6 +114,7 @@ dict_dtypes = {
     "id": "str",
     "country": "str",
     "type": "str",
+    "status": "str", 
     "quarter": "str",
     "debt": "float",
     "revenue": "float",
