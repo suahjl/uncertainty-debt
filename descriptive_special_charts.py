@@ -38,6 +38,86 @@ path_data = "./data/"
 path_output = "./output/"
 
 # %%
+# --- GDP growth volatility against uncertainty
+for uncertainty, uncertainty_nice in tqdm(
+    zip(["epu", "wui", "uct"], ["EPU", "WUI", "UCT"])
+):
+    # prelims
+    df = pd.read_parquet(path_data + "data_macro_yoy_ratesinlevels.parquet")
+    df = df[
+        [
+            "country",
+            "quarter",
+            "gdp",
+            uncertainty,
+            "privdebt_ngdp_ref",
+            "govdebt_ngdp_ref",
+        ]
+    ]
+    countries_keep = [
+        "australia",
+        "belgium",
+        "canada",
+        "france",
+        "greece",
+        "ireland",
+        "italy",
+        "japan",
+        "mexico",
+        "netherlands",
+        "russian_federation",
+        "singapore",
+        "spain",
+        "united_states",
+    ]  # 14 countries
+    df = df[df["country"].isin(countries_keep)].copy()
+    df = df.dropna()
+    df = df.reset_index(drop=True)
+    # compute volatility
+    df["gdp_volatility"] = (
+        df.groupby("country")["gdp"].rolling(12).std().reset_index(drop=True)
+    )
+    # df[uncertainty] = df.groupby("country")[uncertainty].rolling(12).mean().reset_index(drop=True)
+    # df[uncertainty] = df.groupby("country")[uncertainty].shift(1).reset_index(drop=True)
+    # pooled scatter
+    fig = scatterplot(
+        data=df,
+        y_col="gdp_volatility",
+        y_col_nice="GDP growth volatility",
+        x_col=uncertainty,
+        x_col_nice=uncertainty_nice,
+        marker_colour="red",
+        marker_size=3,
+        best_fit_colour="black",
+        best_fit_width=3,
+        main_title="GDP growth volatility (3Y rolling std dev) against "
+        + uncertainty_nice,
+        font_size=16,
+    )
+    fig.write_image(path_output + "scatter_global_gdpvol_" + uncertainty + ".png")
+    # country by country scattter
+    fig = subplots_scatterplots(
+        data=df,
+        col_group="country",
+        cols_x=[uncertainty],
+        cols_y=["gdp_volatility"],
+        annot_size=9,
+        font_size=16,
+        marker_colours=["red"],
+        marker_sizes=[2],
+        include_best_fit=True,
+        best_fit_colours=["black"],
+        best_fit_widths=[2],
+        main_title="GDP growth volatility (3Y rolling std dev) against "
+        + uncertainty_nice,
+        maxrows=4,
+        maxcols=4,
+        add_horizontal_at_yzero=True,
+        add_vertical_at_xzero=True,
+    )
+    fig.write_image(path_output + "scatter_cbyc_gdpvol_" + uncertainty + ".png")
+
+# %%
 # --- Global debt stacked area chart
 df = pd.read_csv(path_data_special + "ceic_global_debt_for_charts.csv")
 df["quarter"] = pd.to_datetime(df["quarter"].astype("str"), format="%b-%y").astype(
