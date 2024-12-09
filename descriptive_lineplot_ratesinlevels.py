@@ -55,11 +55,9 @@ cols_groups = ["country", "quarter"]
 # Trim columns
 cols_all = (
     [
-        "hhdebt",
-        "corpdebt",
+        "privdebt",
         "govdebt",
-        "hhdebt_ngdp_ref",
-        "corpdebt_ngdp_ref",
+        "privdebt_ngdp_ref",
         "govdebt_ngdp_ref",
         "gdp",
         "urate",
@@ -75,10 +73,8 @@ cols_all = (
 colours_all = [
     "red",
     "green",
-    "blue",
     "darkred",
     "darkgreen",
-    "darkblue",
     "black",
     "lightgrey",
     "magenta",
@@ -103,15 +99,12 @@ df["y_is_zero"] = 0
 # if "stir" in mp_variable:
 countries_drop = [
     "india",  # 2016 Q3
-    "belgium",  # ends 2022 Q3
     "denmark",  # ends 2019 Q3
     "china",  # 2007 Q4 and potentially exclusive case
     "colombia",  # 2006 Q4
     "germany",  # 2006 Q1
     "sweden",  # ends 2020 Q3 --- epu
-    # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
-    # "russia",  # basket case
-]  # 12-13 countries
+]
 # Timebound
 df["date"] = pd.to_datetime(df["quarter"]).dt.date
 df = df[(df["date"] >= t_start)]

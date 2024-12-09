@@ -9,6 +9,10 @@ import os
 from dotenv import load_dotenv
 import ast
 import shutil
+from helper import pil_img2pdf_manualextension
+from pypdf import PdfMerger, PdfWriter, PdfReader
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 time_start = time.time()
 
@@ -46,225 +50,97 @@ def compile_filenames_regex(pattern, file_path):
     return file_list
 
 
+def create_watermark(text, filename):
+    """Create a single-page PDF with the watermark text."""
+    c = canvas.Canvas(filename, pagesize=letter)
+    c.setFont("Helvetica", 9)  # font size
+    c.setFillColorRGB(0, 0, 0, alpha=1)  # RGB, opacity
+    c.drawString(10, 10, text)  # Adjust position (X, Y, text)
+    c.save()
+
+
+def watermark_pdf(input_pdf, output_pdf, watermarks):
+    """Apply watermarks to a PDF, each page with a different watermark."""
+    reader = PdfReader(input_pdf + ".pdf")
+    writer = PdfWriter()
+
+    for i, page in enumerate(reader.pages):
+        # Create a unique watermark file
+        watermark_filename = f"watermark_{i}.pdf"
+        create_watermark(watermarks[i], watermark_filename)
+
+        # Read the watermark
+        watermark_reader = PdfReader(watermark_filename)
+        watermark_page = watermark_reader.pages[0]
+
+        # Merge the watermark with the page
+        page.merge_page(watermark_page)
+        writer.add_page(page)
+
+        # Clean up the temporary watermark file
+        os.remove(watermark_filename)
+
+    # Write the watermarked PDF
+    with open(output_pdf + ".pdf", "wb") as output_file:
+        writer.write(output_file)
+
+
 # %%
-# II --- Compile selected files (can instead softcode, but hardcoding makes it easier to define specific set)
-selected_file_names = [
-    "stacked_area_lineplot_globaldebt",
-    "lineplot_global_debt",
-    "lineplot_global_hhdebt",
-    "lineplot_global_corpdebt",
-    "lineplot_global_govdebt",
-    "lineplot_global_privdebt",
-    "lineplot_global_privbankdebt",
-    "lineplot_global_totaldebt_ae",
-    "lineplot_global_totaldebt_eme",
-    "lineplot_global_hhdebt_ae",
-    "lineplot_global_hhdebt_eme",
-    "lineplot_global_corpdebt_ae",
-    "lineplot_global_corpdebt_eme",
-    "lineplot_global_govdebt_ae",
-    "lineplot_global_govdebt_eme",
-    "lineplot_gepu",
-    "stacked_area_lineplot_globalgdp_breakdown",
-    "scatter_regime_ratesinlevels_hhdebt_ngdp_gdp_against_maxminepu",
-    "scatter_regime_ratesinlevels_govdebt_ngdp_gdp_against_maxminepu",
-    "scatter_regime_ratesinlevels_hhdebt_ngdp_corecpi_against_maxminepu",
-    "scatter_regime_ratesinlevels_govdebt_ngdp_corecpi_against_maxminepu",
-    "scatter_regime_ratesinlevels_hhdebt_ngdp_cpi_against_maxminepu",
-    "scatter_regime_ratesinlevels_govdebt_ngdp_cpi_against_maxminepu",
-    "lineplot_hhdebt_ngdp_ref",
-    "lineplot_corpdebt_ngdp_ref",
-    "lineplot_govdebt_ngdp_ref",
-    "lineplot_hhdebt",
-    "lineplot_corpdebt",
-    "lineplot_govdebt",
-    "lineplot_maxminepu",
-    "lineplot_maxminstir",
-    "lineplot_ratesinlevels_epu",
-    "lineplot_ratesinlevels_stir",
-    "thresholdselection_aicc_contour",
-    "histogram_debt_ngdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminstir",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminstir",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxstir_shockmaxstir",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxstir_shockmaxstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxstir_shockmaxstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxstir_shockmaxstir",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxstir_shockmaxstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxstir_shockmaxstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minstir_shockminstir",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minstir_shockminstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minstir_shockminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minstir_shockminstir",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minstir_shockminstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minstir_shockminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminepu",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminstir",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminstir",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_panelthresholdlp_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminepu",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminepu",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminltir",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminltir_responsegdp",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminltir_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminltir",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminltir_responsegdp",
-    "quadrant_panelthresholdlp_ltir_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminltir_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminepu",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminepu",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminltir",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminltir_responsegdp",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminltir_shockmaxminltir_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminltir",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminltir_responsegdp",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminltir_shockmaxminltir_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminm2",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminm2",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxm2_shockmaxm2",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxm2_shockmaxm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxm2_shockmaxm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxm2_shockmaxm2",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxm2_shockmaxm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxm2_shockmaxm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minm2_shockminm2",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minm2_shockminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_minm2_shockminm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minm2_shockminm2",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minm2_shockminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_minm2_shockminm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminepu",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminm2",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminepu_maxminm2_shockmaxminm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminm2",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_reduced_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminepu_maxminm2_shockmaxminm2_responsecorecpi",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminus_jln_maxminstir_shockmaxminus_jln",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminus_jln_maxminstir_shockmaxminus_jln_responsegdp",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminus_jln_maxminstir_shockmaxminus_jln_responsecorecpi",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminus_jln_maxminstir_shockmaxminus_jln",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminus_jln_maxminstir_shockmaxminus_jln_responsegdp",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminus_jln_maxminstir_shockmaxminus_jln_responsecorecpi",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminus_jln_maxminstir_shockmaxminstir",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminus_jln_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp0_govdebt_ngdp0modwith_maxminus_jln_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminus_jln_maxminstir_shockmaxminstir",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminus_jln_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_thresholdlp_us_jln_irf_hhdebt_ngdp1_govdebt_ngdp1modwith_maxminus_jln_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsereer",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsehhdebt",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsecorpdebt",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsegovdebt",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsestir",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsemaxminstir",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsemaxminepu",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsereer",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsehhdebt",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsecorpdebt",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsegovdebt",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsestir",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsemaxminstir",
-    "quadrant_panelthresholdlp_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsemaxminepu",
-    "quadrant_panelthresholdlp_reduced_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_reduced_irf_modwith_maxminepu_maxminstir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_reduced_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_panelthresholdlp_reduced_irf_modwith_maxminepu_maxminstir_shockmaxminstir_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_irf_modwith_maxminepu_maxminltir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_ltir_irf_modwith_maxminepu_maxminltir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_irf_modwith_maxminepu_maxminltir_shockmaxminltir_responsegdp",
-    "quadrant_panelthresholdlp_ltir_irf_modwith_maxminepu_maxminltir_shockmaxminltir_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_modwith_maxminepu_maxminltir_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_modwith_maxminepu_maxminltir_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_modwith_maxminepu_maxminltir_shockmaxminltir_responsegdp",
-    "quadrant_panelthresholdlp_ltir_reduced_irf_modwith_maxminepu_maxminltir_shockmaxminltir_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_modwith_maxminepu_maxminm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_modwith_maxminepu_maxminm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_irf_modwith_maxminepu_maxminm2_shockmaxminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_irf_modwith_maxminepu_maxminm2_shockmaxminm2_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_reduced_irf_modwith_maxminepu_maxminm2_shockmaxminepu_responsegdp",
-    "quadrant_panelthresholdlp_m2_reduced_irf_modwith_maxminepu_maxminm2_shockmaxminepu_responsecorecpi",
-    "quadrant_panelthresholdlp_m2_reduced_irf_modwith_maxminepu_maxminm2_shockmaxminm2_responsegdp",
-    "quadrant_panelthresholdlp_m2_reduced_irf_modwith_maxminepu_maxminm2_shockmaxminm2_responsecorecpi",
-    "quadrant_thresholdlp_us_jln_irf_modwith_maxminus_jln_maxminstir_shockmaxminus_jln_responsegdp",
-    "quadrant_thresholdlp_us_jln_irf_modwith_maxminus_jln_maxminstir_shockmaxminus_jln_responsecorecpi",
-    "quadrant_thresholdlp_us_jln_irf_modwith_maxminus_jln_maxminstir_shockmaxminstir_responsegdp",
-    "quadrant_thresholdlp_us_jln_irf_modwith_maxminus_jln_maxminstir_shockmaxminstir_responsecorecpi",
+# II --- Compile selected files
+list_regex = [
+    r"^thresholdselection_fe_modwith_[\w]+_aicc_contour.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminepu_responsegdp.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_privdebt_ngdp[\w]+_govdebt_ngdp[\w]+modwith_[\w]+_shockmaxminepu_responsegdp.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminwui_responsegdp.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_privdebt_ngdp[\w]+_govdebt_ngdp[\w]+modwith_[\w]+_shockmaxminwui_responsegdp.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminuct_responsegdp.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_privdebt_ngdp[\w]+_govdebt_ngdp[\w]+modwith_[\w]+_shockmaxminuct_responsegdp.png",
+    r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminepu_responsecapex.png",
+    r"^heatmap_cbyc_[\w]+",
 ]
-selected_file_names = [i + ".png" for i in selected_file_names]
+individual_file_names = [
+    "stacked_area_lineplot_globaldebt",
+    "stacked_area_lineplot_globalgdp_breakdown",
+    "lineplot_gepu",
+    "scatter_regime_ratesinlevels_privdebt_ngdp_gdp_against_maxminepu",
+    "scatter_regime_ratesinlevels_govdebt_ngdp_gdp_against_maxminepu",
+    "histogram_debt_ngdp",
+    "lineplot_ratesinlevels_privdebt_ngdp_ref",
+    "lineplot_ratesinlevels_govdebt_ngdp_ref",
+    "lineplot_ratesinlevels_maxminepu",
+    "lineplot_ratesinlevels_epu",
+    "lineplot_ratesinlevels_maxminstir",
+    "lineplot_ratesinlevels_stir",
+    "lineplot_ratesinlevels_privdebt",
+    "lineplot_ratesinlevels_govdebt",
+    "lineplot_ratesinlevels_gdp",
+    "lineplot_ratesinlevels_corecpi",
+    "lineplot_ratesinlevels_reer",
+    "lineplot_ratesinlevels_maxminbrent",
+]
+individual_file_names = [i + ".png" for i in individual_file_names]
+file_names_from_regex = []
+for regex in list_regex:
+    file_names_from_regex += compile_filenames_regex(
+        pattern=regex,
+        file_path=path_output,
+    )
+selected_file_names = individual_file_names + file_names_from_regex
 clear_directory(directory_to_clear=path_for_paper)
 copy_files(
     input_path=path_output,
     input_file_names=selected_file_names,
     output_path=path_for_paper,
+)
+pdfname = "all_charts_for_paper"
+selected_file_names = [path_output + i for i in selected_file_names]
+pil_img2pdf_manualextension(
+    list_images=selected_file_names, pdf_name=path_for_paper + pdfname
+)
+watermark_pdf(
+    input_pdf=path_for_paper + pdfname,
+    output_pdf=path_for_paper + pdfname,
+    watermarks=selected_file_names,
 )
 
 # %%

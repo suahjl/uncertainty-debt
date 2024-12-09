@@ -60,6 +60,28 @@ fig = stacked_area_lineplot(
 fig.write_image(path_output + "stacked_area_lineplot_globaldebt.png")
 
 # %%
+# --- Global debt stacked area chart (public / private)
+df = pd.read_csv(path_data_special + "ceic_global_debt_for_charts.csv")
+df["quarter"] = pd.to_datetime(df["quarter"].astype("str"), format="%b-%y").astype(
+    "str"
+)
+df["quarter"] = pd.to_datetime(df["quarter"].astype("str")).dt.to_period("Q")
+df["quarter"] = df["quarter"].astype("str")
+fig = stacked_area_lineplot(
+    data=df,
+    x_col="quarter",
+    y_cols_area=["privdebt", "govdebt"],
+    y_cols_area_nice=["Private", "Government"],
+    y_cols_line=["debt"],
+    y_cols_line_nice=["Total"],
+    colours_area=["red", "green"],
+    colours_line=["black"],
+    main_title="Global PPP-weighted credit to the non-financial sector",
+    font_size=24,
+)
+fig.write_image(path_output + "stacked_area_lineplot_globaldebt_privgovdebt.png")
+
+# %%
 # --- Global GDP breakdown stacked area chart
 df = pd.read_csv(path_data_special + "ceic_wb_globalgdp_breakdown.csv")
 df["inventories_gdp_share"] = df["gcf_gdp_share"] - df["gfcf_gdp_share"]
@@ -135,7 +157,7 @@ for col in tqdm([i for i in list(df.columns) if "quarter" not in i]):
     fig.write_image(path_output + "lineplot_global_" + col + ".png")
 
 # %%
-df = pd.read_csv(path_data + "ceic_ae_eme_debt_for_charts.csv")
+df = pd.read_csv(path_data_special + "ceic_ae_eme_debt_for_charts.csv")
 df["quarter"] = pd.to_datetime(df["quarter"].astype("str"), format="%b-%y").astype(
     "str"
 )
@@ -182,33 +204,11 @@ fig = lineplot(
 fig.write_image(path_output + "lineplot_gepu.png")
 
 # %%
-# --- Distribution of HH and gov debt
+# --- Distribution of priv and gov debt
+# load data
 df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
-df = df[
-    ["country", "quarter", "hhdebt_ngdp_ref", "corpdebt_ngdp_ref", "govdebt_ngdp_ref"]
-]
-fig = go.Figure()
-fig.add_trace(
-    go.Histogram(
-        x=df["hhdebt_ngdp_ref"], name="HH debt", opacity=0.75, marker=dict(color="red")
-    )
-)
-fig.add_trace(
-    go.Histogram(
-        x=df["govdebt_ngdp_ref"],
-        name="Government debt",
-        opacity=0.75,
-        marker=dict(color="darkblue"),
-    )
-)
-fig.update_layout(
-    title="Histogram of HH and government debt-to-GDP ratios",
-    plot_bgcolor="white",
-    font=dict(color="black", size=12),
-    height=768,
-    width=1366,
-)
-fig.write_image(path_output + "histogram_debt_ngdp.png")
+df = df[["country", "quarter", "privdebt_ngdp_ref", "govdebt_ngdp_ref"]]
+# find quantile
 
 
 def find_quantile(value, column):
@@ -221,23 +221,20 @@ def find_quantile(value, column):
     )
 
 
-hhdebt_threshold = 60.5
-govdebt_threshold = 95
-
-quantile_hhdebt = find_quantile(hhdebt_threshold, "hhdebt_ngdp_ref")
+privdebt_threshold = 162
+govdebt_threshold = 93.5
+quantile_hhdebt = find_quantile(privdebt_threshold, "privdebt_ngdp_ref")
 quantile_govdebt = find_quantile(govdebt_threshold, "govdebt_ngdp_ref")
-
 print(
-    f"The value {hhdebt_threshold} in hhdebt_ngdp_ref is in the {quantile_hhdebt:.2%} quantile."
+    f"The value {privdebt_threshold} in privdebt_ngdp_ref is in the {quantile_hhdebt:.2%} quantile."
 )
 print(
     f"The value {govdebt_threshold} in govdebt_ngdp_ref is in the {quantile_govdebt:.2%} quantile."
 )
-
 df_quantile = pd.DataFrame(
     {
-        "variable": ["hhdebt_ngdp", "govdebt_ngdp"],
-        "threshold": [hhdebt_threshold, govdebt_threshold],
+        "variable": ["privdebt_ngdp", "govdebt_ngdp"],
+        "threshold": [privdebt_threshold, govdebt_threshold],
         "quantile": [100 * quantile_hhdebt, 100 * quantile_govdebt],
     }
 )
@@ -245,11 +242,60 @@ df_quantile.to_csv(
     path_output + "debt_ngdp_threshold_quantile_positions.csv", index=False
 )
 
+# plot histogram
+fig = go.Figure()
+fig.add_trace(
+    go.Histogram(
+        x=df["privdebt_ngdp_ref"],
+        name="Private debt",
+        opacity=0.6,
+        marker=dict(color="red"),
+    )
+)
+fig.add_vline(
+    x=privdebt_threshold,
+    line_width=3,
+    line_dash="dash",
+    line_color="crimson",
+    annotation_text="Private: " + str(privdebt_threshold) + "%",
+)
+fig.add_trace(
+    go.Histogram(
+        x=df["govdebt_ngdp_ref"],
+        name="Government debt",
+        opacity=0.6,
+        marker=dict(color="darkgreen"),
+    )
+)
+fig.add_vline(
+    x=govdebt_threshold,
+    line_width=3,
+    line_dash="dash",
+    line_color="darkgreen",
+    annotation_text="Government: " + str(govdebt_threshold) + "%",
+)
+fig.update_layout(
+    title="Histogram of private and government debt-to-GDP ratios",
+    plot_bgcolor="white",
+    font=dict(color="black", size=16),
+    height=768,
+    width=1366,
+)
+fig.write_image(path_output + "histogram_debt_ngdp.png")
+
+
 # %%
-# --- Country-by-country summaries of hh and gov debt
+# --- Country-by-country summaries of priv and gov debt
 df = pd.read_parquet(path_data + "data_macro_yoy.parquet")
 df = df[
-    ["country", "quarter", "hhdebt_ngdp_ref", "corpdebt_ngdp_ref", "govdebt_ngdp_ref"]
+    [
+        "country",
+        "quarter",
+        # "hhdebt_ngdp_ref",
+        # "corpdebt_ngdp_ref",
+        "privdebt_ngdp_ref",
+        "govdebt_ngdp_ref",
+    ]
 ]
 countries_keep = [
     "australia",
@@ -265,14 +311,12 @@ countries_keep = [
     "russian_federation",
     "singapore",
     "spain",
-    "united_states"
+    "united_states",
 ]  # 14 countries
 df = df[df["country"].isin(countries_keep)].copy()
 df = df.dropna()
 df = df.reset_index(drop=True)
-hhdebt_threshold = 60.5
-govdebt_threshold = 95
-for col in ["hhdebt", "govdebt"]:
+for col in ["privdebt", "govdebt"]:
     sumstats = pd.DataFrame(df.groupby("country")[col + "_ngdp_ref"].describe())
     sumstats = sumstats[["min", "25%", "50%", "75%", "max"]].copy()
     fig = heatmap(
@@ -288,7 +332,7 @@ for col in ["hhdebt", "govdebt"]:
         y_fontsize=12,
         x_fontsize=12,
         title_fontsize=12,
-        annot_fontsize=12
+        annot_fontsize=12,
     )
 
 # %%

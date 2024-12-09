@@ -92,11 +92,25 @@ list_regex = [
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminwui_response[\w]+.png",
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminuct_response[\w]+.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_maxminepu_[\w]+_shockmaxminstir_response[\w]+.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_maxminwui_[\w]+_shockmaxminstir_response[\w]+.png",
+    r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_maxminuct_[\w]+_shockmaxminstir_response[\w]+.png",
+    r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
+    r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminstir_response[\w]+.png",
+    r"^micro_panelthresholdlp_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
+    r"^micro_panelthresholdlp_modwith_[\w]+_shockmaxminstir_response[\w]+.png",
 ]
 list_pdfnames = [
     "quadrant_privdebt_panelthresholdlp_shockmaxminepu",
     "quadrant_privdebt_panelthresholdlp_shockmaxminwui",
     "quadrant_privdebt_panelthresholdlp_shockmaxminuct",
+    "quadrant_privdebt_panelthresholdlp_modwith_maxminepu_shockmaxminstir",
+    "quadrant_privdebt_panelthresholdlp_modwith_maxminwui_shockmaxminstir",
+    "quadrant_privdebt_panelthresholdlp_modwith_maxminuct_shockmaxminstir",
+    "micro_quarterly_panelthresholdlp_shockmaxminepu",
+    "micro_quarterly_panelthresholdlp_shockmaxminstir",
+    "micro_panelthresholdlp_shockmaxminepu",
+    "micro_panelthresholdlp_shockmaxminstir",
 ]
 clear_directory(directory_to_clear=path_for_chartpack)
 for regex, pdfname in zip(list_regex, list_pdfnames):
@@ -104,6 +118,7 @@ for regex, pdfname in zip(list_regex, list_pdfnames):
         pattern=regex,
         file_path=path_output,
     )
+    # print(selected_file_names)
     copy_files(
         input_path=path_output,
         input_file_names=selected_file_names,

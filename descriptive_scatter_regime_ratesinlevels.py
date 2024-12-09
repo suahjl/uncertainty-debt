@@ -55,11 +55,9 @@ list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes] + ["epu"]
 cols_groups = ["country", "quarter"]
 # Trim columns
 cols_all = [
-    "hhdebt",
-    "corpdebt",
+    "privdebt",
     "govdebt",
-    "hhdebt_ngdp_ref",
-    "corpdebt_ngdp_ref",
+    "privdebt_ngdp_ref",
     "govdebt_ngdp_ref",
     "gdp",
     "urate",
@@ -72,10 +70,8 @@ cols_all = [
 # colours_all = [
 #     "red",
 #     "green",
-#     "blue",
 #     "darkred",
 #     "darkgreen",
-#     "darkblue",
 #     "black",
 #     "lightgrey",
 #     "magenta",
@@ -90,18 +86,14 @@ cols_all = [
 # ]
 df = df[cols_groups + cols_all + list_uncertainty_variables].copy()
 # Trim more countries
-# if "stir" in mp_variable:
 countries_drop = [
     "india",  # 2016 Q3
-    "belgium",  # ends 2022 Q3
     "denmark",  # ends 2019 Q3
     "china",  # 2007 Q4 and potentially exclusive case
     "colombia",  # 2006 Q4
     "germany",  # 2006 Q1
     "sweden",  # ends 2020 Q3 --- epu
-    # "mexico",  # ends 2023 Q1 --- ngdp (keep if %yoy for debt and not %diff_ngdp)
-    # "russia",  # basket case
-]  # 12-13 countries
+]  # synced with epu + stir model
 # Timebound
 df["date"] = pd.to_datetime(df["quarter"]).dt.date
 df = df[(df["date"] >= t_start)]
@@ -114,199 +106,115 @@ df = df.dropna(axis=0)
 def find_quadrant_thresholds(
     df: pd.DataFrame,
     threshold_variables: list[str],
-    option: str,
-    param_choices: list[float],
 ):
-    if option == "dumb":
-        df.loc[
-            df[threshold_variables[0] + "_ref"] >= param_choices[0],
-            threshold_variables[0] + "_above_threshold",
-        ] = 1
-        df.loc[
-            df[threshold_variables[0] + "_ref"] < param_choices[0],
-            threshold_variables[0] + "_above_threshold",
-        ] = 0
-        df.loc[
-            df[threshold_variables[1] + "_ref"] >= param_choices[1],
-            threshold_variables[0] + "_above_threshold",
-        ] = 1
-        df.loc[
-            df[threshold_variables[1] + "_ref"] < param_choices[1],
-            threshold_variables[1] + "_above_threshold",
-        ] = 0
-        # quadrant 1 (0,0)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
-        ] = 0
-        # quadrant 2 (1,0)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
-        ] = 0
-        # quadrant 3 (0,1)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
-        ] = 0
-        # quadrant 4 (1,1)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
-        ] = 0
-        print("Threshold of " + threshold_variables[0] + " is " + str(param_choices[0]))
-        print("Threshold of " + threshold_variables[1] + " is " + str(param_choices[1]))
-    elif option == "reg_thresholdselection":
-        df_opt_threshold = pd.read_csv(
-            path_output
-            + "reg_quadrant_thresholdselection_fe_"
-            + "modwith_"
-            + uncertainty_variable
-            + "_"
-            + mp_variable
-            + "_opt_threshold"
-            + ".csv"
-        )
-        opt_threshold0 = df_opt_threshold.iloc[0, 0]
-        opt_threshold1 = df_opt_threshold.iloc[0, 1]
-        # first
-        df.loc[
-            df[threshold_variables[0] + "_ref"] >= opt_threshold0,
-            threshold_variables[0] + "_above_threshold",
-        ] = 1
-        df.loc[
-            df[threshold_variables[0] + "_ref"] < opt_threshold0,
-            threshold_variables[0] + "_above_threshold",
-        ] = 0
-        # second
-        df.loc[
-            df[threshold_variables[1] + "_ref"] >= opt_threshold1,
-            threshold_variables[1] + "_above_threshold",
-        ] = 1
-        df.loc[
-            df[threshold_variables[1] + "_ref"] < opt_threshold1,
-            threshold_variables[1] + "_above_threshold",
-        ] = 0
-        # quadrant 1 (0,0)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
-        ] = 0
-        # quadrant 2 (1,0)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 0)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
-        ] = 0
-        # quadrant 3 (0,1)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 0)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
-        ] = 0
-        # quadrant 4 (1,1)
-        df.loc[
-            (
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
-        ] = 1
-        df.loc[
-            ~(
-                (df[threshold_variables[0] + "_above_threshold"] == 1)
-                & (df[threshold_variables[1] + "_above_threshold"] == 1)
-            ),
-            threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
-        ] = 0
-        print(
-            "optimal thresholds: "
-            + threshold_variables[0]
-            + " = "
-            + str(opt_threshold0)
-            + " and "
-            + threshold_variables[1]
-            + " = "
-            + str(opt_threshold1)
-        )
+    df_opt_threshold = pd.read_csv(
+        path_output
+        + "reg_quadrant_privdebt_thresholdselection_fe_"
+        + "modwith_"
+        + uncertainty_variable
+        + "_"
+        + mp_variable
+        + "_opt_threshold"
+        + ".csv"
+    )
+    opt_threshold0 = df_opt_threshold.iloc[0, 0]
+    opt_threshold1 = df_opt_threshold.iloc[0, 1]
+    # first
+    df.loc[
+        df[threshold_variables[0] + "_ref"] >= opt_threshold0,
+        threshold_variables[0] + "_above_threshold",
+    ] = 1
+    df.loc[
+        df[threshold_variables[0] + "_ref"] < opt_threshold0,
+        threshold_variables[0] + "_above_threshold",
+    ] = 0
+    # second
+    df.loc[
+        df[threshold_variables[1] + "_ref"] >= opt_threshold1,
+        threshold_variables[1] + "_above_threshold",
+    ] = 1
+    df.loc[
+        df[threshold_variables[1] + "_ref"] < opt_threshold1,
+        threshold_variables[1] + "_above_threshold",
+    ] = 0
+    # quadrant 1 (0,0)
+    df.loc[
+        (
+            (df[threshold_variables[0] + "_above_threshold"] == 0)
+            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+        ),
+        threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
+    ] = 1
+    df.loc[
+        ~(
+            (df[threshold_variables[0] + "_above_threshold"] == 0)
+            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+        ),
+        threshold_variables[0] + "0" + "_" + threshold_variables[1] + "0",
+    ] = 0
+    # quadrant 2 (1,0)
+    df.loc[
+        (
+            (df[threshold_variables[0] + "_above_threshold"] == 1)
+            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+        ),
+        threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
+    ] = 1
+    df.loc[
+        ~(
+            (df[threshold_variables[0] + "_above_threshold"] == 1)
+            & (df[threshold_variables[1] + "_above_threshold"] == 0)
+        ),
+        threshold_variables[0] + "1" + "_" + threshold_variables[1] + "0",
+    ] = 0
+    # quadrant 3 (0,1)
+    df.loc[
+        (
+            (df[threshold_variables[0] + "_above_threshold"] == 0)
+            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+        ),
+        threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
+    ] = 1
+    df.loc[
+        ~(
+            (df[threshold_variables[0] + "_above_threshold"] == 0)
+            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+        ),
+        threshold_variables[0] + "0" + "_" + threshold_variables[1] + "1",
+    ] = 0
+    # quadrant 4 (1,1)
+    df.loc[
+        (
+            (df[threshold_variables[0] + "_above_threshold"] == 1)
+            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+        ),
+        threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
+    ] = 1
+    df.loc[
+        ~(
+            (df[threshold_variables[0] + "_above_threshold"] == 1)
+            & (df[threshold_variables[1] + "_above_threshold"] == 1)
+        ),
+        threshold_variables[0] + "1" + "_" + threshold_variables[1] + "1",
+    ] = 0
+    print(
+        "optimal thresholds: "
+        + threshold_variables[0]
+        + " = "
+        + str(opt_threshold0)
+        + " and "
+        + threshold_variables[1]
+        + " = "
+        + str(opt_threshold1)
+    )
     return df
 
 
 # Threshold
-threshold_variables = ["hhdebt_ngdp", "govdebt_ngdp"]
+threshold_variables = ["privdebt_ngdp", "govdebt_ngdp"]
 df = find_quadrant_thresholds(
     df=df,
     threshold_variables=threshold_variables,
-    option="reg_thresholdselection",
-    param_choices=[0, 0],
 )
 
 # Reset index
@@ -318,7 +226,7 @@ plot_cbyc = False
 if plot_cbyc:
     pic_names = []
     for threshold_variable in threshold_variables:
-        for x in ["epu", "maxminepu", "maxminstir"]:
+        for x in ["epu", "maxminepu"]:
             for y in tqdm(cols_all):
                 # split x-axis columns into when H = 0 and H = 1
                 df.loc[
@@ -378,7 +286,7 @@ plot_pooled = True
 if plot_pooled:
     pic_names = []
     for threshold_variable in threshold_variables:
-        for x in ["epu", "maxminepu", "maxminstir"]:
+        for x in ["epu", "maxminepu"]:
             for y in tqdm(cols_all):
                 # split x-axis columns into when H = 0 and H = 1
                 df.loc[
@@ -401,7 +309,7 @@ if plot_pooled:
                     ],
                     y_cols=[y, y],
                     y_cols_nice=[y, y],
-                    font_size=22,
+                    font_size=16,
                     marker_colours=["red", "black"],  # black and red for easy reference
                     marker_sizes=[4, 4],
                     best_fit_colours=["red", "black"],
