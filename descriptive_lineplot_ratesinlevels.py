@@ -47,9 +47,10 @@ df = pd.read_parquet(path_data + "data_macro_yoy_ratesinlevels.parquet")
 
 # %%
 # II --- Additional wrangling
-list_shock_prefixes = ["max", "min", "maxmin"]
-list_mp_variables = [i + "stir" for i in list_shock_prefixes] + ["stir"]
-list_uncertainty_variables = [i + "epu" for i in list_shock_prefixes] + ["epu"]
+list_mp_variables = ["stir", "maxminstir"]
+list_mp_variables_nice = ["STIR", "STIR shocks"]
+list_uncertainty_variables = ["epu", "maxminepu", "wui", "maxminwui"]
+list_uncertainty_variables_nice = ["EPU", "EPU shocks", "WUI", "WUI shocks"]
 # Groupby ref
 cols_groups = ["country", "quarter"]
 # Trim columns
@@ -70,6 +71,21 @@ cols_all = (
     + list_mp_variables
     + list_uncertainty_variables
 )
+cols_all_nice = (
+    [
+        "Private debt %YoY",
+        "Government debt %YoY",
+        "Private debt (% of GDP)",
+        "Government debt (% of GDP)",
+        "Real GDP %YoY",
+        "U-rate YoY",
+        "Core CPI %YoY",
+        "CPi %YoY",
+        "REER %YoY",
+    ]
+    + list_mp_variables_nice
+    + list_uncertainty_variables_nice
+)
 colours_all = [
     "red",
     "green",
@@ -80,8 +96,6 @@ colours_all = [
     "magenta",
     "pink",
     "purple",
-    "mediumpurple",
-    "plum",
     "yellowgreen",
     "orange",
     "mediumslateblue",
@@ -96,15 +110,14 @@ df = df[cols_groups + cols_all].copy()
 # Add y=0
 df["y_is_zero"] = 0
 # Trim more countries
-# if "stir" in mp_variable:
-countries_drop = [
-    "india",  # 2016 Q3
-    "denmark",  # ends 2019 Q3
-    "china",  # 2007 Q4 and potentially exclusive case
-    "colombia",  # 2006 Q4
-    "germany",  # 2006 Q1
-    "sweden",  # ends 2020 Q3 --- epu
-]
+# countries_drop = [
+#     "india",  # 2016 Q3
+#     "denmark",  # ends 2019 Q3
+#     "china",  # 2007 Q4 and potentially exclusive case
+#     "colombia",  # 2006 Q4
+#     "germany",  # 2006 Q1
+#     "sweden",  # ends 2020 Q3 --- epu
+# ]
 # Timebound
 df["date"] = pd.to_datetime(df["quarter"]).dt.date
 df = df[(df["date"] >= t_start)]
@@ -117,18 +130,20 @@ df = df.reset_index(drop=True)
 # %%
 # III --- Plot
 pic_names = []
-for y, ycolour, dash in tqdm(zip(cols_all, colours_all, dashes_all)):
+for y, y_nice, ycolour, dash in tqdm(
+    zip(cols_all, cols_all_nice, colours_all, dashes_all)
+):
     fig = subplots_linecharts(
         data=df,
         col_group="country",
         cols_values=[y, "y_is_zero"],
-        cols_values_nice=[y, "Y=0"],
+        cols_values_nice=[y_nice, "Y=0"],
         col_time="quarter",
-        annot_size=9,
+        annot_size=12,
         font_size=9,
         line_colours=[ycolour, "grey"],
         line_dashes=[dash, "dot"],
-        main_title=y,
+        main_title=y_nice,
         maxrows=5,
         maxcols=4,
         title_size=24,

@@ -122,7 +122,6 @@ individual_file_names = [
     "lineplot_ratesinlevels_gdp",
     "lineplot_ratesinlevels_corecpi",
     "lineplot_ratesinlevels_reer",
-    "lineplot_ratesinlevels_maxminbrent",
 ]
 individual_file_names = [i + ".png" for i in individual_file_names]
 file_names_from_regex = []

@@ -101,7 +101,7 @@ for uncertainty, uncertainty_nice in tqdm(
         col_group="country",
         cols_x=[uncertainty],
         cols_y=["gdp_volatility"],
-        annot_size=9,
+        annot_size=14,
         font_size=16,
         marker_colours=["red"],
         marker_sizes=[2],
