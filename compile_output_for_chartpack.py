@@ -97,6 +97,8 @@ list_regex = [
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_maxminuct_[\w]+_shockmaxminstir_response[\w]+.png",
     r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
     r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminstir_response[\w]+.png",
+    r"^micro_quarterly_panelthresholdlp_exjpus_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
+    r"^micro_quarterly_panelthresholdlp_exjpus_modwith_[\w]+_shockmaxminstir_response[\w]+.png",
     r"^micro_panelthresholdlp_modwith_[\w]+_shockmaxminepu_response[\w]+.png",
     r"^micro_panelthresholdlp_modwith_[\w]+_shockmaxminstir_response[\w]+.png",
 ]
@@ -109,6 +111,8 @@ list_pdfnames = [
     "quadrant_privdebt_panelthresholdlp_modwith_maxminuct_shockmaxminstir",
     "micro_quarterly_panelthresholdlp_shockmaxminepu",
     "micro_quarterly_panelthresholdlp_shockmaxminstir",
+    "micro_quarterly_panelthresholdlp_exjpus_shockmaxminepu",
+    "micro_quarterly_panelthresholdlp_exjpus_shockmaxminstir",
     "micro_panelthresholdlp_shockmaxminepu",
     "micro_panelthresholdlp_shockmaxminstir",
 ]

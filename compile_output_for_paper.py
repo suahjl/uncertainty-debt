@@ -96,6 +96,7 @@ list_regex = [
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_modwith_[\w]+_shockmaxminuct_responsegdp.png",
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_privdebt_ngdp[\w]+_govdebt_ngdp[\w]+modwith_[\w]+_shockmaxminuct_responsegdp.png",
     r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminepu_responsecapex.png",
+    r"^micro_quarterly_panelthresholdlp_exjpus_modwith_[\w]+_shockmaxminepu_responsecapex.png",
     r"^heatmap_cbyc_[\w]+",
 ]
 individual_file_names = [

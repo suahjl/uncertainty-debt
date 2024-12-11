@@ -246,7 +246,7 @@ def do_everything(
             + cols_endog_ordered[0]
             + "_"
             + cols_endog_ordered[1]
-            + file_suffixes
+            # + file_suffixes
             + ".csv"
         )
         if not os.path.isfile(aicc_file_name):
@@ -355,7 +355,8 @@ def do_everything(
             + cols_endog_ordered[0]
             + "_"
             + cols_endog_ordered[1]
-            + file_suffixes
+            # + "_"
+            # + file_suffixes
             + ".png"
         )
         # find optimal threshold
@@ -496,6 +497,42 @@ do_everything(
         # "germany",  # 2006 Q1
         "sweden",  # ends 2020 Q3 --- epu
         "nigeria",
+    ],
+    trim_extreme_ends_perc=trim_extreme_ends_perc,
+)
+
+# %%
+# II.B --- Drop US and JP
+do_everything(
+    cut_off_start_quarter=cut_off_start_quarter,
+    cut_off_end_quarter=cut_off_end_quarter,
+    col_entity=col_entity,
+    col_country_micro=col_country_micro,
+    col_country_macro=col_country_macro,
+    cols_endog_micro=cols_endog_micro,
+    cols_endog_macro=cols_endog_macro,
+    cols_exog_macro=cols_exog_macro,
+    cols_endog_ordered=cols_endog_ordered,
+    cols_threshold=cols_threshold,
+    threshold_option=threshold_option,
+    col_y_reg_threshold_selection=col_y_reg_threshold_selection,
+    threshold_ranges=threshold_ranges,
+    threshold_range_skip=threshold_range_skip,
+    col_x_reg_interacted_with_threshold=col_x_reg_interacted_with_threshold,
+    shocks_to_plot=shocks_to_plot,
+    lp_horizon=lp_horizon,
+    file_suffixes="exjpus_",  # "abc_" or ""
+    input_df_suffix="yoy",
+    countries_drop=[
+        "india",  # 2016 Q3
+        "denmark",  # ends 2019 Q3
+        "china",  # 2007 Q4 and potentially exclusive case
+        # "colombia",  # 2006 Q4
+        # "germany",  # 2006 Q1
+        "sweden",  # ends 2020 Q3 --- epu
+        "nigeria",
+        "japan",
+        "united_states",
     ],
     trim_extreme_ends_perc=trim_extreme_ends_perc,
 )
