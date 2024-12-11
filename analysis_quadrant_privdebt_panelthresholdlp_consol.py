@@ -60,6 +60,7 @@ def do_everything_quadrant_panelthresholdlp(
             max_quarter_by_country.groupby("country")["quarter"].max().reset_index()
         )
         print(tabulate(max_quarter_by_country, headers="keys", tablefmt="pretty"))
+        return max_quarter_by_country
 
     # Loop to estimate
     for mp_variable in tqdm(list_mp_variables):
@@ -84,12 +85,34 @@ def do_everything_quadrant_panelthresholdlp(
             ].copy()
             # Check when the panel becomes balanced
             check_balance_timing(input=df)
-            check_balance_endtiming(input=df)
+            df_pre_balance = check_balance_endtiming(input=df)
+            df_pre_balance.to_csv(
+                path_output
+                + "quadrant_privdebt_prebalancecountries_"
+                + file_suffixes
+                + "modwith_"
+                + uncertainty_variable
+                + "_"
+                + mp_variable
+                + ".csv",
+                index=False,
+            )
             # Trim more countries
             df = df[~df["country"].isin(countries_drop)].copy()
             # Check again when panel becomes balanced
             check_balance_timing(input=df)
-            check_balance_endtiming(input=df)
+            df_post_balance = check_balance_endtiming(input=df)
+            df_post_balance.to_csv(
+                path_output
+                + "quadrant_privdebt_postbalancecountries_"
+                + file_suffixes
+                + "modwith_"
+                + uncertainty_variable
+                + "_"
+                + mp_variable
+                + ".csv",
+                index=False,
+            )
             # Timebound
             df["date"] = pd.to_datetime(df["quarter"]).dt.date
             df = df[(df["date"] >= t_start)]
@@ -371,6 +394,8 @@ def do_everything_quadrant_panelthresholdlp(
 
             # Reset index
             df = df.reset_index(drop=True)
+            # Count how many countries
+            print("Number of countries included: " + str(len(df["country"].unique())))
             # Numeric time
             df["time"] = df.groupby("country").cumcount()
             del df["quarter"]
@@ -923,7 +948,7 @@ do_everything_quadrant_panelthresholdlp(
         "sweden",
     ],
     file_suffixes="",  # format: "abc_" or ""
-    input_df_suffix="large_yoy"  # different data set
+    input_df_suffix="large_yoy",  # different data set
 )
 
 # %%
@@ -950,7 +975,7 @@ do_everything_quadrant_panelthresholdlp(
         "denmark",
     ],
     file_suffixes="",  # format: "abc_" or ""
-    input_df_suffix="full_yoy"  # different data set
+    input_df_suffix="full_yoy",  # different data set
 )
 
 

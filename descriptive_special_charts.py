@@ -8,6 +8,7 @@ from helper import (
     telsendmsg,
     subplots_scatterplots,
     scatterplot,
+    scatterplot_layered,
     subplots_linecharts,
     stacked_barchart,
     stacked_barchart_overlaycallouts,
@@ -116,6 +117,61 @@ for uncertainty, uncertainty_nice in tqdm(
         add_vertical_at_xzero=True,
     )
     fig.write_image(path_output + "scatter_cbyc_gdpvol_" + uncertainty + ".png")
+    # pooled scatter by <p75 and >p75 debt
+    df.loc[
+        df["privdebt_ngdp_ref"] >= df["privdebt_ngdp_ref"].quantile(0.75),
+        uncertainty + "_when_privdebt_above_p75",
+    ] = df[uncertainty].copy()
+    df.loc[
+        df["privdebt_ngdp_ref"] < df["privdebt_ngdp_ref"].quantile(0.75),
+        uncertainty + "_when_privdebt_below_p75",
+    ] = df[uncertainty].copy()
+    df.loc[
+        df["govdebt_ngdp_ref"] >= df["govdebt_ngdp_ref"].quantile(0.75),
+        uncertainty + "_when_govdebt_above_p75",
+    ] = df[uncertainty].copy()
+    df.loc[
+        df["govdebt_ngdp_ref"] < df["govdebt_ngdp_ref"].quantile(0.75),
+        uncertainty + "_when_govdebt_below_p75",
+    ] = df[uncertainty].copy()
+    for debt, debt_nice in zip(
+        ["privdebt", "govdebt"], ["Private debt", "Government debt"]
+    ):
+        fig = scatterplot_layered(
+            data=df,
+            y_cols=["gdp_volatility", "gdp_volatility"],
+            y_cols_nice=["GDP growth volatility", "GDP growth volatility"],
+            x_cols=[
+                uncertainty + "_when_" + debt + "_above_p75",
+                uncertainty + "_when_" + debt + "_below_p75",
+            ],
+            x_cols_nice=[
+                debt_nice + " > 75th percentile",
+                debt_nice + " < 75th percentile",
+            ],
+            marker_colours=["red", "grey"],
+            marker_sizes=[4, 4],
+            best_fit_colours=["crimson", "black"],
+            best_fit_widths=[3, 3],
+            main_title="GDP growth volatility (3Y rolling std dev) against "
+            + uncertainty_nice
+            + " when "
+            + debt_nice
+            + " is above and below 75th percentile",
+            font_size=16,
+            add_horizontal_at_yzero=False,
+            add_vertical_at_xzero=False,
+        )
+        fig.write_image(
+            path_output
+            + "scatter_global_gdpvol_"
+            + uncertainty
+            + "_"
+            + debt
+            + "p75"
+            + ".png"
+        )
+
 
 # %%
 # --- Global debt stacked area chart
