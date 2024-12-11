@@ -45,15 +45,8 @@ def do_everything(
     cols_endog_micro: list[str],
     cols_endog_macro: list[str],
     cols_exog_macro: list[str],
-    cols_endog_ordered: list[str],
     cols_threshold: list[str],
     threshold_option: str,
-    col_y_reg_threshold_selection: str,
-    threshold_ranges: list[float],
-    threshold_range_skip: float,
-    col_x_reg_interacted_with_threshold: list[str],
-    shocks_to_plot: list[str],
-    lp_horizon: int,
     file_suffixes: str,
     input_df_suffix: str,
     countries_drop: list[str] = None,
@@ -221,149 +214,23 @@ def do_everything(
     print("Final dataframe has " + str(n_analysis) + " firms")
 
     # F --- Deal with threshold variable
-    if threshold_option == "p75":
-        df.loc[
-            df[cols_threshold[0]] >= df[cols_threshold[0]].quantile(0.75),
-            "threshold_on",
-        ] = 1
-        df.loc[
-            df[cols_threshold[0]] < df[cols_threshold[0]].quantile(0.75), "threshold_on"
-        ] = 0
-        print("75p threshold: " + str(df[cols_threshold[0]].quantile(0.75)))
-    elif threshold_option == "manual":
-        manual_threshold_value = 55
-        df.loc[
-            df[cols_threshold[0]] >= manual_threshold_value,
-            "threshold_on",
-        ] = 1
-        df.loc[df[cols_threshold[0]] < manual_threshold_value, "threshold_on"] = 0
-        print("Manual threshold: " + str(manual_threshold_value))
-    elif threshold_option == "pols_minaicc":
+    if threshold_option == "pols_minaicc":
         aicc_file_name = (
             path_output
             + "micro_quarterly_thresholdselection_"
             + "modwith_"
-            + cols_endog_ordered[0]
+            + cols_endog_macro[0]
             + "_"
-            + cols_endog_ordered[1]
+            + cols_endog_macro[1]
             + file_suffixes
             + ".csv"
         )
-        if not os.path.isfile(aicc_file_name):
-            # base columns on lhs and rhs
-            cols_x_reg_threshold_selection = (
-                cols_endog_micro + cols_endog_macro + cols_exog_macro
-            )
-            cols_x_reg_threshold_selection = [
-                col
-                for col in cols_x_reg_threshold_selection
-                if col not in [col_y_reg_threshold_selection]
-            ]
-            # main frame to keep log likelihoods
-            df_loglik = pd.DataFrame(
-                columns=[cols_threshold[0] + "_threshold", "loglik"]
-            )
-            df_aicc = pd.DataFrame(columns=[cols_threshold[0] + "_threshold", "aicc"])
-            # loop over threshold candidates
-            for threshold in np.arange(
-                threshold_ranges[0], threshold_ranges[1], threshold_range_skip
-            ):
-                # print threshold candidate
-                print("Checking AICc for " + cols_threshold[0] + ": " + str(threshold))
-                # separate data
-                df_threshold = df.copy()
-                # create threshold variable
-                df_threshold.loc[
-                    df_threshold[cols_threshold[0]] > threshold,
-                    cols_threshold[0] + "_abovethreshold",
-                ] = 1
-                df_threshold.loc[
-                    df_threshold[cols_threshold[0]] <= threshold,
-                    cols_threshold[0] + "_abovethreshold",
-                ] = 0
-                # rhs terms
-                cols_x_reg_threshold_selection = cols_x_reg_threshold_selection + [
-                    cols_threshold[0] + "_abovethreshold"
-                ]  # X + Y + XY
-                # interaction terms
-                for col in col_x_reg_interacted_with_threshold:
-                    df_threshold[col + "_" + cols_threshold[0] + "_abovethreshold"] = (
-                        df_threshold[col]
-                        * df_threshold[cols_threshold[0] + "_abovethreshold"]
-                    )
-                    cols_x_reg_threshold_selection += [
-                        col + "_" + cols_threshold[0] + "_abovethreshold"
-                    ]  # add all interaction terms
-                # estimate the model
-                mod, res, params_table, joint_teststats, reg_det = fe_reg(
-                    df=df_threshold,
-                    y_col=col_y_reg_threshold_selection,
-                    x_cols=cols_x_reg_threshold_selection,
-                    i_col=col_entity,
-                    t_col=col_time,
-                    fixed_effects=True,
-                    time_effects=False,
-                    cov_choice="robust",
-                )
-                # log likelihood
-                df_loglik_sub = pd.DataFrame(
-                    {
-                        cols_threshold[0] + "_threshold": [threshold],
-                        "loglik": [res.loglik],
-                    }
-                )
-                df_loglik = pd.concat([df_loglik, df_loglik_sub], axis=0)  # top down
-                # AICc
-                df_aicc_sub = pd.DataFrame(
-                    {
-                        cols_threshold[0] + "_threshold": [threshold],
-                        "aicc": [
-                            (-2 * res.loglik + 2 * res.df_model)
-                            + (
-                                (2 * res.df_model * (res.df_model + 1))
-                                / (res.entity_info.total - res.df_model - 1)
-                            )
-                        ],
-                    }
-                )
-                df_aicc = pd.concat([df_aicc, df_aicc_sub], axis=0)  # top down
-            # save file
-            df_aicc.to_csv(
-                aicc_file_name,
-                index=False,
-            )
-        elif os.path.isfile(aicc_file_name):
-            df_aicc = pd.read_csv(aicc_file_name)
-        # plot AICc path
-        fig = lineplot(
-            data=df_aicc,
-            y_cols=["aicc"],
-            y_cols_nice=["AICc"],
-            x_col=df_aicc.columns[0],
-            x_col_nice="Threshold",
-            line_colours=["black"],
-            line_widths=[3],
-            line_dashes=["solid"],
-            main_title="Grid search of optimal threshold by AICc-minimisation",
-            font_size=24,
-            show_legend=False,
-        )
-        fig.write_image(
-            path_output
-            + "micro_quarterly_thresholdselection_aicc_"
-            + "modwith_"
-            + cols_endog_ordered[0]
-            + "_"
-            + cols_endog_ordered[1]
-            + file_suffixes
-            + ".png"
-        )
+        df_aicc = pd.read_csv(aicc_file_name)
         # find optimal threshold
         threshold_optimal = df_aicc.loc[
             df_aicc["aicc"] == df_aicc["aicc"].min(),
             cols_threshold[0] + "_threshold",
         ].reset_index(drop=True)[0]
-        print(df_aicc)
         print(
             "Optimal threshold for "
             + cols_threshold[0]
@@ -374,60 +241,62 @@ def do_everything(
         df.loc[df[cols_threshold[0]] >= threshold_optimal, "threshold_on"] = 1
         df.loc[df[cols_threshold[0]] < threshold_optimal, "threshold_on"] = 0
 
-    # X --- Estimate LP model
-    # Convert to multiindex
-    df = df.set_index([col_entity] + [col_time])
-    # Run threshold LP
-    irf_on, irf_off = lp.ThresholdPanelLPX(
-        data=df,
-        Y=cols_endog_ordered,
-        X=cols_exog_macro,
-        threshold_var="threshold_on",
-        response=cols_endog_ordered,
-        horizon=lp_horizon,
-        lags=1,
-        varcov="robust",
-        ci_width=0.8,
-    )
-    # Plot IRFs
-    for shock in shocks_to_plot:
-        for response in tqdm(cols_endog_micro):
-            fig = lp.ThresholdIRFPlot(
-                irf_threshold_on=irf_on,
-                irf_threshold_off=irf_off,
-                response=[response],
-                shock=[shock],
-                n_columns=1,
-                n_rows=1,
-                maintitle="Response of "
-                + response
-                + " to "
-                + shock
-                + " shocks; threshold variable: "
-                + cols_threshold[0]
-                + "; N="
-                + str(n_analysis),
-                show_fig=False,
-                save_pic=False,
-                annot_size=12,
-                font_size=16,
-            )
-            fig.write_image(
-                path_output
-                + "micro_quarterly_panelthresholdlp_"
-                + file_suffixes
-                + "modwith_"
-                + cols_endog_ordered[0]
-                + "_"
-                + cols_endog_ordered[1]
-                + "_shock"
-                + shock
-                + "_response"
-                + response
-                + ".png",
-                height=768,
-                width=1366,
-            )
+    # ----  EVERYTHING ABOVE NEEDS TO MATCH WITH THE LP ANALYSIS SO THAT THE DATA IS EXACTLY THE SAME ----
+
+    # G --- Descriptive stats
+    # Change country names
+    df[col_country_micro] = df[col_country_micro].str.replace("_", " ").str.title()
+    # Columns of interest
+    cols_to_analyse = cols_endog_micro + cols_threshold
+    # Calculate N
+    df_describe = df.groupby(col_country_micro)[col_entity].nunique()
+    df_describe = pd.DataFrame(df_describe)
+    df_describe.columns = ["N"]
+    # Calculate N percentage of total
+    df_describe["N%"] = 100 * (df_describe["N"] / n_analysis)
+    df_describe["N%"] = df_describe["N%"].round(2)
+    df_describe = df_describe.astype("str")
+    df_describe["N%"] = df_describe["N%"] + "%"
+    # Input T
+    df_describe["T"] = df[col_time].max()
+    # Add analytical columns
+    for col in cols_to_analyse:
+        df_describe_analyse = df.groupby(col_country_micro)[col].describe(
+            percentiles=[0.1, 0.25, 0.5, 0.75, 0.9]
+        )
+        df_describe_analyse = df_describe_analyse[["10%", "25%", "50%", "75%", "90%"]]
+        df_describe_analyse = df_describe_analyse.rename(
+            columns={
+                "10%": "10th percentile",
+                "25%": "25th percentile",
+                "50%": "50th percentile",
+                "75%": "75th percentile",
+                "90%": "90th percentile",
+            }
+        )
+        df_describe_analyse = df_describe.merge(
+            df_describe_analyse, left_index=True, right_index=True
+        )
+        cols_percentiles = [i for i in df_describe_analyse.columns if "percentile" in i]
+        df_describe_analyse[cols_percentiles] = df_describe_analyse[
+            cols_percentiles
+        ].round(1)
+        df_describe_analyse = df_describe_analyse.reset_index(drop=False)
+        df_describe_analyse.to_csv(
+            path_output
+            + "micro_quarterly_"
+            + file_suffixes
+            + "modwith_"
+            + cols_endog_macro[0]
+            + "_"
+            + cols_endog_macro[1]
+            + "_"
+            + "tabpercentiles"
+            + "_"
+            + col
+            + ".csv",
+            index=False,
+        )
 
 
 # %%
@@ -435,35 +304,15 @@ def do_everything(
 col_entity = "id"
 col_country_micro = "country"
 col_country_macro = "country"
-cols_endog_micro = [
-    "debt",
-    "capex",
-    # "revenue"
-]
+cols_endog_micro = ["debt", "capex", "revenue"]
 cols_endog_macro = ["maxminepu", "maxminstir", "stir", "gdp", "corecpi"]
-cols_endog_ordered = [
-    "maxminepu",
-    "maxminstir",
-    "stir",
-    "gdp",
-    "corecpi",
-    "debt",
-    "capex",
-    # "revenue",
-]
 cols_exog_macro = ["maxminbrent"]
 cols_threshold = [
     "debtrevenue_ref"
 ]  # can only handle 1 for now (no reason to handle more)
-shocks_to_plot = ["maxminepu", "maxminstir"]  # uncertainty, mp
-lp_horizon = 8
 cut_off_start_quarter = "2007Q1"  # "2007Q1"
 cut_off_end_quarter = "2024Q1"
 threshold_option = "pols_minaicc"  # "pols_minaicc"  "manual"  p75
-col_y_reg_threshold_selection = "capex"
-threshold_ranges = [0, 155]
-threshold_range_skip = 5
-col_x_reg_interacted_with_threshold = ["maxminepu"]
 trim_extreme_ends_perc = None  # 0.01  0.05  0.1
 
 # %%
@@ -477,15 +326,8 @@ do_everything(
     cols_endog_micro=cols_endog_micro,
     cols_endog_macro=cols_endog_macro,
     cols_exog_macro=cols_exog_macro,
-    cols_endog_ordered=cols_endog_ordered,
     cols_threshold=cols_threshold,
     threshold_option=threshold_option,
-    col_y_reg_threshold_selection=col_y_reg_threshold_selection,
-    threshold_ranges=threshold_ranges,
-    threshold_range_skip=threshold_range_skip,
-    col_x_reg_interacted_with_threshold=col_x_reg_interacted_with_threshold,
-    shocks_to_plot=shocks_to_plot,
-    lp_horizon=lp_horizon,
     file_suffixes="",  # "abc_" or ""
     input_df_suffix="yoy",
     countries_drop=[
