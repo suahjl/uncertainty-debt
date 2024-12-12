@@ -97,8 +97,6 @@ list_regex = [
     r"^quadrant_privdebt_panelthresholdlp_[\w]+_privdebt_ngdp[\w]+_govdebt_ngdp[\w]+modwith_[\w]+_shockmaxminuct_responsegdp.png",
     r"^micro_quarterly_panelthresholdlp_modwith_[\w]+_shockmaxminepu_responsecapex.png",
     r"^micro_quarterly_panelthresholdlp_exjpus_modwith_[\w]+_shockmaxminepu_responsecapex.png",
-    r"^micro_quarterly_thresholdselection_aicc_modwith_[\w]+__shockmaxminepu_responsecapex"
-    r"^heatmap_cbyc_[\w]+",
 ]
 individual_file_names = [
     "stacked_area_lineplot_globaldebt",
@@ -116,8 +114,8 @@ individual_file_names = [
     # "scatter_cbyc_gdpvol_wui",
     # "scatter_global_gdpvol_uct",
     # "scatter_cbyc_gdpvol_uct",
-    "scatter_regime_ratesinlevels_privdebt_ngdp_gdp_against_maxminepu",
-    "scatter_regime_ratesinlevels_govdebt_ngdp_gdp_against_maxminepu",
+    # "scatter_regime_ratesinlevels_privdebt_ngdp_gdp_against_maxminepu",
+    # "scatter_regime_ratesinlevels_govdebt_ngdp_gdp_against_maxminepu",
     "histogram_debt_ngdp",
     "lineplot_ratesinlevels_privdebt_ngdp_ref",
     "lineplot_ratesinlevels_govdebt_ngdp_ref",
@@ -130,6 +128,9 @@ individual_file_names = [
     "lineplot_ratesinlevels_gdp",
     "lineplot_ratesinlevels_corecpi",
     "lineplot_ratesinlevels_reer",
+    "micro_quarterly_thresholdselection_aicc_modwith_maxminepu_maxminstir",
+    "heatmap_cbyc_govdebt",
+    "heatmap_cbyc_privdebt",
 ]
 individual_file_names = [i + ".png" for i in individual_file_names]
 file_names_from_regex = []
